@@ -11,6 +11,7 @@ class GoalCard extends StatelessWidget {
     required this.onEdit,
     required this.onCopy,
     required this.onDelete,
+    required this.onPrint,
   });
 
   final Goal goal;
@@ -18,6 +19,7 @@ class GoalCard extends StatelessWidget {
   final VoidCallback onEdit;
   final VoidCallback onCopy;
   final VoidCallback onDelete;
+  final VoidCallback onPrint;
 
   @override
   Widget build(BuildContext context) {
@@ -89,6 +91,12 @@ class GoalCard extends StatelessWidget {
                 tooltip: 'Make a copy',
                 onPressed: onCopy,
                 icon: const Icon(Icons.copy_outlined),
+              ),
+            if (!isPast)
+              IconButton(
+                tooltip: 'Print punch card',
+                onPressed: onPrint,
+                icon: const Icon(Icons.print_outlined),
               ),
             PopupMenuButton<String>(
               tooltip: 'Goal options',

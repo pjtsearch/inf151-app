@@ -1,9 +1,11 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:printing/printing.dart';
 
 import '../models/goal.dart';
 import '../services/goal_storage.dart';
+import '../services/punch_card_pdf.dart';
 import '../utils/goal_date_utils.dart';
 import '../widgets/empty_goals.dart';
 import '../widgets/goal_card.dart';
@@ -108,6 +110,15 @@ class _GoalsPageState extends State<GoalsPage> {
     await _saveGoals();
   }
 
+  Future<void> _printPunchCard(Goal goal) async {
+    final pdf = await buildPunchCardPdf(goal);
+    await Printing.layoutPdf(
+      onLayout: (_) => pdf,
+      name:
+          '${goal.title.replaceAll(RegExp(r'[^a-zA-Z0-9-_]'), '_')}_punch_card.pdf',
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final now = DateTime.now();
@@ -148,6 +159,7 @@ class _GoalsPageState extends State<GoalsPage> {
                             onEdit: () => _editGoal(goal: goals[index]),
                             onCopy: () => _copyGoal(goals[index]),
                             onDelete: () => _deleteGoal(goals[index]),
+                            onPrint: () => _printPunchCard(goals[index]),
                           ),
                         ),
                 ),

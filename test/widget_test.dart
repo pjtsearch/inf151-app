@@ -2,10 +2,109 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:inf151_app/main.dart';
 import 'package:inf151_app/models/goal.dart';
+import 'package:inf151_app/services/punch_card_pdf.dart';
 import 'package:inf151_app/services/goal_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
+  test('punch count follows the goal frequency and duration', () {
+    final dailyGoal = Goal(
+      id: 'daily',
+      title: 'Walk',
+      frequency: 1,
+      frequencyUnit: FrequencyUnit.day,
+      duration: 1,
+      durationUnit: DurationUnit.week,
+      startDate: DateTime(2026, 1, 1),
+    );
+    final weeklyGoal = dailyGoal.copyWith(
+      frequency: 2,
+      frequencyUnit: FrequencyUnit.week,
+      duration: 2,
+    );
+    final monthlyGoal = dailyGoal.copyWith(
+      frequencyUnit: FrequencyUnit.month,
+      duration: 3,
+      durationUnit: DurationUnit.month,
+      startDate: DateTime(2025, 1, 31),
+    );
+
+    expect(punchCountFor(dailyGoal), 7);
+    expect(punchCountFor(weeklyGoal), 4);
+    expect(punchCountFor(monthlyGoal), 3);
+  });
+
+  test('punch-card layout uses seven columns and weekday labels', () {
+    final dailyGoal = Goal(
+      id: 'daily',
+      title: 'Walk',
+      frequency: 1,
+      frequencyUnit: FrequencyUnit.day,
+      duration: 1,
+      durationUnit: DurationUnit.week,
+      startDate: DateTime(2026, 1, 1),
+    );
+    final weeklyGoal = dailyGoal.copyWith(frequencyUnit: FrequencyUnit.week);
+
+    expect(punchCardColumnsPerRow, 7);
+    expect(punchCardMaxRows, 2);
+    expect(punchCardColumnLabels(dailyGoal), [
+      'Th',
+      'F',
+      'Sa',
+      'Su',
+      'M',
+      'T',
+      'W',
+    ]);
+    expect(punchCardColumnLabels(weeklyGoal), [
+      'W1',
+      'W2',
+      'W3',
+      'W4',
+      'W5',
+      'W6',
+      'W7',
+    ]);
+    expect(punchCardColumnLabels(dailyGoal, periodOffset: 7).first, 'Th');
+    final monthlyGoal = dailyGoal.copyWith(
+      frequencyUnit: FrequencyUnit.month,
+      startDate: DateTime(2025, 12, 31),
+    );
+    final multipleDailyGoal = dailyGoal.copyWith(frequency: 3);
+    expect(punchCardColumnLabels(monthlyGoal).take(3), ['Dec', 'Jan', 'Feb']);
+    expect(
+      List.generate(
+        3,
+        (index) => punchCardLabelForHole(multipleDailyGoal, index),
+      ),
+      ['Th', null, null],
+    );
+    expect(punchCardLabelForHole(multipleDailyGoal, 3), 'F');
+    expect(punchCardLabelForHole(weeklyGoal.copyWith(frequency: 2), 1), isNull);
+    expect(punchCardLabelForHole(weeklyGoal.copyWith(frequency: 2), 2), 'W2');
+    expect(
+      punchCardLabelForHole(monthlyGoal.copyWith(frequency: 2), 1),
+      isNull,
+    );
+  });
+
+  test('punch-card PDF is generated', () async {
+    final goal = Goal(
+      id: 'pdf',
+      title: 'Walk',
+      frequency: 3,
+      frequencyUnit: FrequencyUnit.day,
+      duration: 1,
+      durationUnit: DurationUnit.week,
+      startDate: DateTime(2026, 1, 1),
+    );
+
+    final bytes = await buildPunchCardPdf(goal);
+
+    expect(String.fromCharCodes(bytes.take(4)), '%PDF');
+  });
+
   test('month duration ends on the corresponding calendar day', () {
     final goal = Goal(
       id: 'goal-1',
@@ -76,11 +175,13 @@ void main() {
     expect(find.text('Take a walk'), findsOneWidget);
     expect(find.text('Reward: Coffee with a friend'), findsOneWidget);
     expect(find.text('1 time per day · 1 week'), findsOneWidget);
+    expect(find.byTooltip('Print punch card'), findsOneWidget);
     expect((await GoalStorage().load()).single.reward, 'Coffee with a friend');
 
     await tester.tap(find.byTooltip('Goal options'));
     await tester.pumpAndSettle();
     expect(find.text('Edit'), findsOneWidget);
+    expect(find.text('Print punch card'), findsNothing);
   });
 
   testWidgets('completed goals appear in Past with a completion indicator', (
