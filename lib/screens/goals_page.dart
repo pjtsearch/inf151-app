@@ -156,7 +156,6 @@ class _GoalsPageState extends State<GoalsPage> {
                           itemBuilder: (context, index) => GoalCard(
                             goal: goals[index],
                             isPast: _showPast,
-                            onEdit: () => _editGoal(goal: goals[index]),
                             onCopy: () => _copyGoal(goals[index]),
                             onDelete: () => _deleteGoal(goals[index]),
                             onPrint: () => _printPunchCard(goals[index]),

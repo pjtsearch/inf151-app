@@ -8,7 +8,6 @@ class GoalCard extends StatelessWidget {
     super.key,
     required this.goal,
     required this.isPast,
-    required this.onEdit,
     required this.onCopy,
     required this.onDelete,
     required this.onPrint,
@@ -16,7 +15,6 @@ class GoalCard extends StatelessWidget {
 
   final Goal goal;
   final bool isPast;
-  final VoidCallback onEdit;
   final VoidCallback onCopy;
   final VoidCallback onDelete;
   final VoidCallback onPrint;
@@ -86,12 +84,11 @@ class GoalCard extends StatelessWidget {
                 ],
               ),
             ),
-            if (isPast)
-              IconButton(
-                tooltip: 'Make a copy',
-                onPressed: onCopy,
-                icon: const Icon(Icons.copy_outlined),
-              ),
+            IconButton(
+              tooltip: 'Make a copy',
+              onPressed: onCopy,
+              icon: const Icon(Icons.copy_outlined),
+            ),
             if (!isPast)
               IconButton(
                 tooltip: 'Print punch card',
@@ -101,12 +98,9 @@ class GoalCard extends StatelessWidget {
             PopupMenuButton<String>(
               tooltip: 'Goal options',
               onSelected: (action) {
-                if (action == 'edit') onEdit();
                 if (action == 'delete') onDelete();
               },
               itemBuilder: (_) => [
-                if (!isPast)
-                  const PopupMenuItem(value: 'edit', child: Text('Edit')),
                 const PopupMenuItem(value: 'delete', child: Text('Delete')),
               ],
             ),

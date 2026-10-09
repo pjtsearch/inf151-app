@@ -177,10 +177,12 @@ void main() {
     expect(find.text('1 time per day · 1 week'), findsOneWidget);
     expect(find.byTooltip('Print punch card'), findsOneWidget);
     expect((await GoalStorage().load()).single.reward, 'Coffee with a friend');
+    expect(find.byTooltip('Make a copy'), findsOneWidget);
 
     await tester.tap(find.byTooltip('Goal options'));
     await tester.pumpAndSettle();
-    expect(find.text('Edit'), findsOneWidget);
+    expect(find.text('Edit'), findsNothing);
+    expect(find.text('Delete'), findsOneWidget);
     expect(find.text('Print punch card'), findsNothing);
   });
 
