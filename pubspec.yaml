@@ -37,6 +37,7 @@ dependencies:
   shared_preferences: ^2.5.6
   pdf: ^3.13.1
   printing: ^5.15.1
+  barcode: ^2.2.9
 
 dev_dependencies:
   flutter_test:

@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'dart:typed_data';
 
+import 'package:barcode/barcode.dart' as barcode;
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 
@@ -133,38 +134,53 @@ pw.Widget _buildCard(Goal goal, int totalHoles, int cardIndex, int cardCount) {
       border: pw.Border.all(color: PdfColors.grey600, width: 0.7),
       borderRadius: pw.BorderRadius.circular(2 * PdfPageFormat.mm),
     ),
-    child: pw.Column(
-      mainAxisAlignment: pw.MainAxisAlignment.end,
-      crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+    child: pw.Stack(
       children: [
-        pw.Text(
-          goal.title,
-          maxLines: 1,
-          overflow: pw.TextOverflow.clip,
-          style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold),
+        pw.Positioned(
+          top: 0,
+          right: 0,
+          child: pw.BarcodeWidget(
+            barcode: barcode.Barcode.dataMatrix(),
+            data: '${goal.id}\t$firstHole\t${firstHole + holesOnCard - 1}',
+            width: 7 * PdfPageFormat.mm,
+            height: 7 * PdfPageFormat.mm,
+            drawText: false,
+          ),
         ),
-        pw.SizedBox(height: 1 * PdfPageFormat.mm),
-        pw.Text(
-          '${goal.frequencyDescription}  |  ${goal.duration} ${goal.durationUnit.name}${goal.duration == 1 ? '' : 's'}  |  Card ${cardIndex + 1} of $cardCount',
-          maxLines: 1,
-          style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey700),
-        ),
-        pw.SizedBox(height: 2 * PdfPageFormat.mm),
-        pw.Spacer(flex: 3),
-        for (var row = 0; row < punchCardMaxRows; row++)
-          if (row * punchCardColumnsPerRow < holesOnCard) ...[
-            _buildPunchRow(
-              goal,
-              firstHole + row * punchCardColumnsPerRow,
-              math.min(
-                punchCardColumnsPerRow,
-                holesOnCard - row * punchCardColumnsPerRow,
-              ),
+        pw.Column(
+          mainAxisAlignment: pw.MainAxisAlignment.end,
+          crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+          children: [
+            pw.Text(
+              goal.title,
+              maxLines: 1,
+              overflow: pw.TextOverflow.clip,
+              style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold),
             ),
-            if (row < punchCardMaxRows - 1 &&
-                holesOnCard > (row + 1) * punchCardColumnsPerRow)
-              pw.SizedBox(height: 1 * PdfPageFormat.mm),
+            pw.SizedBox(height: 1 * PdfPageFormat.mm),
+            pw.Text(
+              '${goal.frequencyDescription}  |  ${goal.duration} ${goal.durationUnit.name}${goal.duration == 1 ? '' : 's'}  |  Card ${cardIndex + 1} of $cardCount',
+              maxLines: 1,
+              style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey700),
+            ),
+            pw.SizedBox(height: 2 * PdfPageFormat.mm),
+            pw.Spacer(flex: 3),
+            for (var row = 0; row < punchCardMaxRows; row++)
+              if (row * punchCardColumnsPerRow < holesOnCard) ...[
+                _buildPunchRow(
+                  goal,
+                  firstHole + row * punchCardColumnsPerRow,
+                  math.min(
+                    punchCardColumnsPerRow,
+                    holesOnCard - row * punchCardColumnsPerRow,
+                  ),
+                ),
+                if (row < punchCardMaxRows - 1 &&
+                    holesOnCard > (row + 1) * punchCardColumnsPerRow)
+                  pw.SizedBox(height: 1 * PdfPageFormat.mm),
+              ],
           ],
+        ),
       ],
     ),
   );
