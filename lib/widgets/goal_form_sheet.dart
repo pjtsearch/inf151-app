@@ -5,9 +5,10 @@ import '../models/goal.dart';
 import '../utils/goal_date_utils.dart';
 
 class GoalFormSheet extends StatefulWidget {
-  const GoalFormSheet({super.key, this.goal});
+  const GoalFormSheet({super.key, this.goal, this.isCopy = false});
 
   final Goal? goal;
+  final bool isCopy;
 
   @override
   State<GoalFormSheet> createState() => _GoalFormSheetState();
@@ -88,7 +89,9 @@ class _GoalFormSheetState extends State<GoalFormSheet> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    widget.goal == null ? 'New goal' : 'Edit goal',
+                    widget.goal == null || widget.isCopy
+                        ? 'New goal'
+                        : 'Edit goal',
                     style: Theme.of(context).textTheme.headlineSmall,
                   ),
                   const SizedBox(height: 20),
@@ -206,7 +209,9 @@ class _GoalFormSheetState extends State<GoalFormSheet> {
                   FilledButton(
                     onPressed: _submit,
                     child: Text(
-                      widget.goal == null ? 'Save goal' : 'Save changes',
+                      widget.goal == null || widget.isCopy
+                          ? 'Save goal'
+                          : 'Save changes',
                     ),
                   ),
                 ],

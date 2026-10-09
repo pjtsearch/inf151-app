@@ -114,5 +114,32 @@ void main() {
 
     expect(find.text('Edit'), findsNothing);
     expect(find.text('Delete'), findsOneWidget);
+
+    await tester.tapAt(const Offset(10, 10));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Make a copy'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('New goal'), findsOneWidget);
+    expect(find.text('Save goal'), findsOneWidget);
+    expect(
+      tester
+          .widget<TextFormField>(find.byType(TextFormField).first)
+          .controller!
+          .text,
+      'Read a book',
+    );
+    expect((await GoalStorage().load()), hasLength(1));
+
+    await tester.enterText(find.byType(TextFormField).first, 'Read two books');
+    await tester.tap(find.text('Save goal'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Read two books'), findsOneWidget);
+    expect(find.text('Read a book'), findsNothing);
+    final savedGoals = await GoalStorage().load();
+    expect(savedGoals, hasLength(2));
+    expect(savedGoals.last.title, 'Read two books');
+    expect(savedGoals.last.isCompleted, isFalse);
   });
 }

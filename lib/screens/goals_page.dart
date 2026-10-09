@@ -55,16 +55,17 @@ class _GoalsPageState extends State<GoalsPage> {
     if (mounted) setState(() {});
   }
 
-  Future<void> _editGoal([Goal? goal]) async {
+  Future<void> _editGoal({Goal? goal, bool isCopy = false}) async {
     final result = await showModalBottomSheet<Goal>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      builder: (_) => GoalFormSheet(goal: goal),
+      builder: (_) => GoalFormSheet(goal: goal, isCopy: isCopy),
     );
     if (result == null) return;
 
     setState(() {
+      _showPast = false;
       final index = _goals.indexWhere((item) => item.id == result.id);
       if (index < 0) {
         _goals.add(result);
@@ -81,8 +82,7 @@ class _GoalsPageState extends State<GoalsPage> {
       startDate: today(),
       isCompleted: false,
     );
-    setState(() => _goals.add(copy));
-    await _saveGoals();
+    await _editGoal(goal: copy, isCopy: true);
   }
 
   Future<void> _deleteGoal(Goal goal) async {
@@ -145,7 +145,7 @@ class _GoalsPageState extends State<GoalsPage> {
                           itemBuilder: (context, index) => GoalCard(
                             goal: goals[index],
                             isPast: _showPast,
-                            onEdit: () => _editGoal(goals[index]),
+                            onEdit: () => _editGoal(goal: goals[index]),
                             onCopy: () => _copyGoal(goals[index]),
                             onDelete: () => _deleteGoal(goals[index]),
                           ),
