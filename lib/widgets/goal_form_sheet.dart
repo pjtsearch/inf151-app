@@ -62,7 +62,7 @@ class _GoalFormSheetState extends State<GoalFormSheet> {
         durationUnit: _durationUnit,
         startDate: _startDate,
         reward: _rewardController.text.trim(),
-        isCompleted: current?.isCompleted ?? false,
+        completedTasks: current?.completedTasks ?? 0,
       ),
     );
   }

@@ -12,7 +12,7 @@ class Goal {
     required this.durationUnit,
     required this.startDate,
     this.reward = '',
-    this.isCompleted = false,
+    this.completedTasks = 0,
   });
 
   final String id;
@@ -23,7 +23,29 @@ class Goal {
   final DurationUnit durationUnit;
   final DateTime startDate;
   final String reward;
-  final bool isCompleted;
+  final int completedTasks;
+
+  int get totalTasks {
+    if (frequency <= 0 || duration <= 0) return 0;
+    final periods = switch (frequencyUnit) {
+      FrequencyUnit.day => switch (durationUnit) {
+        DurationUnit.day => duration,
+        DurationUnit.week => duration * 7,
+        DurationUnit.month => endDate.difference(startDate).inDays + 1,
+      },
+      FrequencyUnit.week => switch (durationUnit) {
+        DurationUnit.day => (duration / 7).ceil(),
+        DurationUnit.week => duration,
+        DurationUnit.month => duration * 4,
+      },
+      FrequencyUnit.month => switch (durationUnit) {
+        DurationUnit.day => (duration / 30).ceil(),
+        DurationUnit.week => (duration / 4).ceil(),
+        DurationUnit.month => duration,
+      },
+    };
+    return periods * frequency;
+  }
 
   DateTime get endDate {
     switch (durationUnit) {
@@ -38,8 +60,12 @@ class Goal {
     }
   }
 
+  bool get hasCompletedAllTasks =>
+      totalTasks > 0 && completedTasks >= totalTasks;
+
   bool isPastOn(DateTime date) =>
-      isCompleted || !date.isBefore(endDate.add(const Duration(days: 1)));
+      hasCompletedAllTasks ||
+      !date.isBefore(endDate.add(const Duration(days: 1)));
 
   String get frequencyDescription {
     final unit = switch (frequencyUnit) {
@@ -59,7 +85,7 @@ class Goal {
     DurationUnit? durationUnit,
     DateTime? startDate,
     String? reward,
-    bool? isCompleted,
+    int? completedTasks,
   }) => Goal(
     id: id ?? this.id,
     title: title ?? this.title,
@@ -69,7 +95,7 @@ class Goal {
     durationUnit: durationUnit ?? this.durationUnit,
     startDate: startDate ?? this.startDate,
     reward: reward ?? this.reward,
-    isCompleted: isCompleted ?? this.isCompleted,
+    completedTasks: completedTasks ?? this.completedTasks,
   );
 
   Map<String, Object> toJson() => {
@@ -81,7 +107,7 @@ class Goal {
     'durationUnit': durationUnit.name,
     'startDate': startDate.toIso8601String(),
     'reward': reward,
-    'isCompleted': isCompleted,
+    'completedTasks': completedTasks,
   };
 
   factory Goal.fromJson(Map<String, dynamic> json) => Goal(
@@ -93,6 +119,20 @@ class Goal {
     durationUnit: DurationUnit.values.byName(json['durationUnit'] as String),
     startDate: DateTime.parse(json['startDate'] as String),
     reward: json['reward'] as String? ?? '',
-    isCompleted: json['isCompleted'] as bool? ?? false,
+    completedTasks: json['completedTasks'] as int? ??
+        ((json['isCompleted'] as bool? ?? false) ? _legacyCompletedTaskCount(json) : 0),
   );
+}
+
+int _legacyCompletedTaskCount(Map<String, dynamic> json) {
+  final goal = Goal(
+    id: json['id'] as String,
+    title: json['title'] as String,
+    frequency: json['frequency'] as int,
+    frequencyUnit: FrequencyUnit.values.byName(json['frequencyUnit'] as String),
+    duration: json['duration'] as int,
+    durationUnit: DurationUnit.values.byName(json['durationUnit'] as String),
+    startDate: DateTime.parse(json['startDate'] as String),
+  );
+  return goal.totalTasks;
 }

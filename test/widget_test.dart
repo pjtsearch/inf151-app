@@ -132,7 +132,7 @@ void main() {
       duration: 6,
       durationUnit: DurationUnit.month,
       startDate: DateTime(2025, 1, 1),
-      isCompleted: true,
+      completedTasks: 24,
     );
     final storage = GoalStorage();
 
@@ -150,7 +150,7 @@ void main() {
       duration: 1,
       durationUnit: DurationUnit.month,
       startDate: DateTime(2030, 1, 1),
-      isCompleted: true,
+      completedTasks: 32,
     );
 
     expect(goal.isPastOn(DateTime(2026, 10, 9)), isTrue);
@@ -186,7 +186,7 @@ void main() {
     expect(find.text('Print punch card'), findsNothing);
   });
 
-  testWidgets('completed goals appear in Past with a completion indicator', (
+  testWidgets('completed goals appear in Past with a task count', (
     tester,
   ) async {
     SharedPreferences.setMockInitialValues({});
@@ -198,7 +198,7 @@ void main() {
       duration: 1,
       durationUnit: DurationUnit.month,
       startDate: DateTime(2030, 1, 1),
-      isCompleted: true,
+      completedTasks: 32,
     );
     await GoalStorage().save([goal]);
 
@@ -210,7 +210,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Read a book'), findsOneWidget);
-    expect(find.text('Completed'), findsOneWidget);
+    expect(find.text('32 tasks/32 completed'), findsOneWidget);
 
     await tester.tap(find.byTooltip('Goal options'));
     await tester.pumpAndSettle();
@@ -243,6 +243,6 @@ void main() {
     final savedGoals = await GoalStorage().load();
     expect(savedGoals, hasLength(2));
     expect(savedGoals.last.title, 'Read two books');
-    expect(savedGoals.last.isCompleted, isFalse);
+    expect(savedGoals.last.completedTasks, 0);
   });
 }

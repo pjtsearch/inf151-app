@@ -61,28 +61,7 @@ String _monthLabel(DateTime startDate, int offset) {
   return months[(startDate.month - 1 + offset) % months.length];
 }
 
-int _periodCountFor(Goal goal) => switch (goal.frequencyUnit) {
-  FrequencyUnit.day => switch (goal.durationUnit) {
-    DurationUnit.day => goal.duration,
-    DurationUnit.week => goal.duration * 7,
-    DurationUnit.month => goal.endDate.difference(goal.startDate).inDays + 1,
-  },
-  FrequencyUnit.week => switch (goal.durationUnit) {
-    DurationUnit.day => (goal.duration / 7).ceil(),
-    DurationUnit.week => goal.duration,
-    DurationUnit.month => goal.duration * 4,
-  },
-  FrequencyUnit.month => switch (goal.durationUnit) {
-    DurationUnit.day => (goal.duration / 30).ceil(),
-    DurationUnit.week => (goal.duration / 4).ceil(),
-    DurationUnit.month => goal.duration,
-  },
-};
-
-int punchCountFor(Goal goal) {
-  if (goal.frequency <= 0 || goal.duration <= 0) return 0;
-  return _periodCountFor(goal) * goal.frequency;
-}
+int punchCountFor(Goal goal) => goal.totalTasks;
 
 Future<Uint8List> buildPunchCardPdf(Goal goal) async {
   final totalHoles = punchCountFor(goal);

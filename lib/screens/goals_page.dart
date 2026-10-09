@@ -82,7 +82,7 @@ class _GoalsPageState extends State<GoalsPage> {
     final copy = goal.copyWith(
       id: DateTime.now().microsecondsSinceEpoch.toString(),
       startDate: today(),
-      isCompleted: false,
+      completedTasks: 0,
     );
     await _editGoal(goal: copy, isCopy: true);
   }
