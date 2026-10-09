@@ -36,7 +36,8 @@ class Goal {
     }
   }
 
-  bool isPastOn(DateTime date) => !date.isBefore(endDate);
+  bool isPastOn(DateTime date) =>
+      !date.isBefore(endDate.add(const Duration(days: 1)));
 
   String get frequencyDescription {
     final unit = switch (frequencyUnit) {

@@ -19,7 +19,8 @@ void main() {
 
     expect(goal.endDate, DateTime(2025, 2, 28));
     expect(goal.isPastOn(DateTime(2025, 2, 27)), isFalse);
-    expect(goal.isPastOn(DateTime(2025, 2, 28)), isTrue);
+    expect(goal.isPastOn(DateTime(2025, 2, 28)), isFalse);
+    expect(goal.isPastOn(DateTime(2025, 3, 1)), isTrue);
   });
 
   test('goals survive a storage reload', () async {
