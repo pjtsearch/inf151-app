@@ -77,6 +77,10 @@ void main() {
     expect(find.text('Reward: Coffee with a friend'), findsOneWidget);
     expect(find.text('1 time per day · 1 week'), findsOneWidget);
     expect((await GoalStorage().load()).single.reward, 'Coffee with a friend');
+
+    await tester.tap(find.byTooltip('Goal options'));
+    await tester.pumpAndSettle();
+    expect(find.text('Edit'), findsOneWidget);
   });
 
   testWidgets('completed goals appear in Past with a completion indicator', (
@@ -104,5 +108,11 @@ void main() {
 
     expect(find.text('Read a book'), findsOneWidget);
     expect(find.text('Completed'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Goal options'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Edit'), findsNothing);
+    expect(find.text('Delete'), findsOneWidget);
   });
 }
