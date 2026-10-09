@@ -12,6 +12,7 @@ class Goal {
     required this.durationUnit,
     required this.startDate,
     this.reward = '',
+    this.isCompleted = false,
   });
 
   final String id;
@@ -22,6 +23,7 @@ class Goal {
   final DurationUnit durationUnit;
   final DateTime startDate;
   final String reward;
+  final bool isCompleted;
 
   DateTime get endDate {
     switch (durationUnit) {
@@ -37,7 +39,7 @@ class Goal {
   }
 
   bool isPastOn(DateTime date) =>
-      !date.isBefore(endDate.add(const Duration(days: 1)));
+      isCompleted || !date.isBefore(endDate.add(const Duration(days: 1)));
 
   String get frequencyDescription {
     final unit = switch (frequencyUnit) {
@@ -57,6 +59,7 @@ class Goal {
     DurationUnit? durationUnit,
     DateTime? startDate,
     String? reward,
+    bool? isCompleted,
   }) => Goal(
     id: id ?? this.id,
     title: title ?? this.title,
@@ -66,6 +69,7 @@ class Goal {
     durationUnit: durationUnit ?? this.durationUnit,
     startDate: startDate ?? this.startDate,
     reward: reward ?? this.reward,
+    isCompleted: isCompleted ?? this.isCompleted,
   );
 
   Map<String, Object> toJson() => {
@@ -77,6 +81,7 @@ class Goal {
     'durationUnit': durationUnit.name,
     'startDate': startDate.toIso8601String(),
     'reward': reward,
+    'isCompleted': isCompleted,
   };
 
   factory Goal.fromJson(Map<String, dynamic> json) => Goal(
@@ -88,5 +93,6 @@ class Goal {
     durationUnit: DurationUnit.values.byName(json['durationUnit'] as String),
     startDate: DateTime.parse(json['startDate'] as String),
     reward: json['reward'] as String? ?? '',
+    isCompleted: json['isCompleted'] as bool? ?? false,
   );
 }

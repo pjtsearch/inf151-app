@@ -33,12 +33,28 @@ void main() {
       duration: 6,
       durationUnit: DurationUnit.month,
       startDate: DateTime(2025, 1, 1),
+      isCompleted: true,
     );
     final storage = GoalStorage();
 
     await storage.save([goal]);
 
     expect((await storage.load()).single.toJson(), goal.toJson());
+  });
+
+  test('a completed goal is past before its end date', () {
+    final goal = Goal(
+      id: 'goal-2',
+      title: 'Read',
+      frequency: 1,
+      frequencyUnit: FrequencyUnit.day,
+      duration: 1,
+      durationUnit: DurationUnit.month,
+      startDate: DateTime(2030, 1, 1),
+      isCompleted: true,
+    );
+
+    expect(goal.isPastOn(DateTime(2026, 10, 9)), isTrue);
   });
 
   testWidgets('a new goal can be added and remains stored', (tester) async {
@@ -61,5 +77,32 @@ void main() {
     expect(find.text('Reward: Coffee with a friend'), findsOneWidget);
     expect(find.text('1 time per day · 1 week'), findsOneWidget);
     expect((await GoalStorage().load()).single.reward, 'Coffee with a friend');
+  });
+
+  testWidgets('completed goals appear in Past with a completion indicator', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+    final goal = Goal(
+      id: 'goal-3',
+      title: 'Read a book',
+      frequency: 1,
+      frequencyUnit: FrequencyUnit.day,
+      duration: 1,
+      durationUnit: DurationUnit.month,
+      startDate: DateTime(2030, 1, 1),
+      isCompleted: true,
+    );
+    await GoalStorage().save([goal]);
+
+    await tester.pumpWidget(const GoalApp());
+    await tester.pumpAndSettle();
+    expect(find.text('Read a book'), findsNothing);
+
+    await tester.tap(find.text('Past'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Read a book'), findsOneWidget);
+    expect(find.text('Completed'), findsOneWidget);
   });
 }

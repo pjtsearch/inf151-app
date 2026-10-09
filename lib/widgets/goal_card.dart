@@ -60,6 +60,27 @@ class GoalCard extends StatelessWidget {
                       color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
                   ),
+                  if (isPast) ...[
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Icon(
+                          goal.isCompleted
+                              ? Icons.check_circle_outline
+                              : Icons.radio_button_unchecked,
+                          size: 16,
+                          color: goal.isCompleted
+                              ? Theme.of(context).colorScheme.primary
+                              : Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                        const SizedBox(width: 5),
+                        Text(
+                          goal.isCompleted ? 'Completed' : 'Not completed',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ],
+                    ),
+                  ],
                 ],
               ),
             ),

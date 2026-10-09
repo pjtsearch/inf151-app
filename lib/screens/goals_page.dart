@@ -79,6 +79,7 @@ class _GoalsPageState extends State<GoalsPage> {
     final copy = goal.copyWith(
       id: DateTime.now().microsecondsSinceEpoch.toString(),
       startDate: today(),
+      isCompleted: false,
     );
     setState(() => _goals.add(copy));
     await _saveGoals();
