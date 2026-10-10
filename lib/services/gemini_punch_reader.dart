@@ -13,7 +13,7 @@ Future<int> readPunchCount(String imagePath) async {
   final bytes = await File(imagePath).readAsBytes();
   final uri = Uri.https(
     'generativelanguage.googleapis.com',
-    '/v1beta/models/gemini-3.8-flash:generateContent',
+    '/v1beta/models/gemini-3.1-flash-lite:generateContent',
   );
   final response = await http.post(
     uri,
@@ -44,7 +44,9 @@ Future<int> readPunchCount(String imagePath) async {
     }),
   );
   if (response.statusCode < 200 || response.statusCode >= 300) {
-    throw HttpException('Gemini request failed (${response.statusCode}).');
+    throw HttpException(
+      'Gemini request failed (${response.statusCode}): ${response.body}',
+    );
   }
   final decoded = jsonDecode(response.body) as Map<String, dynamic>;
   final candidates = decoded['candidates'] as List<dynamic>?;

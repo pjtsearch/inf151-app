@@ -107,7 +107,7 @@ class _ScanCardPageState extends State<ScanCardPage> {
     } catch (error) {
       if (!mounted) return;
       print(error);
-      await _showError('Could not scan this card. Please try again.');
+      await _showError('Could not scan this card. Please try again. ($error)');
     }
   }
 
