@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:printing/printing.dart';
 
 import '../models/goal.dart';
+import 'scan_card_page.dart';
 import '../services/goal_storage.dart';
 import '../services/punch_card_pdf.dart';
 import '../utils/goal_date_utils.dart';
@@ -119,6 +120,17 @@ class _GoalsPageState extends State<GoalsPage> {
     );
   }
 
+  Future<void> _scanCard() async {
+    final updatedGoal = await Navigator.of(context).push<Goal>(
+      MaterialPageRoute(builder: (_) => ScanCardPage(goals: List.of(_goals))),
+    );
+    if (updatedGoal == null || !mounted) return;
+    final index = _goals.indexWhere((goal) => goal.id == updatedGoal.id);
+    if (index < 0) return;
+    setState(() => _goals[index] = updatedGoal);
+    await _saveGoals();
+  }
+
   @override
   Widget build(BuildContext context) {
     final now = DateTime.now();
@@ -164,10 +176,23 @@ class _GoalsPageState extends State<GoalsPage> {
                 ),
               ],
             ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _editGoal(),
-        icon: const Icon(Icons.add),
-        label: const Text('Add goal'),
+      floatingActionButton: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          FloatingActionButton.extended(
+            heroTag: 'scan-card',
+            onPressed: _scanCard,
+            icon: const Icon(Icons.document_scanner_outlined),
+            label: const Text('Scan card'),
+          ),
+          const SizedBox(width: 12),
+          FloatingActionButton.extended(
+            heroTag: 'add-goal',
+            onPressed: () => _editGoal(),
+            icon: const Icon(Icons.add),
+            label: const Text('Add goal'),
+          ),
+        ],
       ),
     );
   }
