@@ -142,6 +142,15 @@ pw.Widget _buildCard(Goal goal, int totalHoles, int cardIndex, int cardCount) {
               maxLines: 1,
               style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey700),
             ),
+            if (goal.reward.isNotEmpty) ...[
+              pw.SizedBox(height: 0.5 * PdfPageFormat.mm),
+              pw.Text(
+                'Reward: ${goal.reward}',
+                maxLines: 1,
+                overflow: pw.TextOverflow.clip,
+                style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700),
+              ),
+            ],
             pw.SizedBox(height: 2 * PdfPageFormat.mm),
             pw.Spacer(flex: 3),
             for (var row = 0; row < punchCardMaxRows; row++)
