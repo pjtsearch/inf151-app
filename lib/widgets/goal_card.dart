@@ -41,10 +41,10 @@ class GoalCard extends StatelessWidget {
                     goal.title,
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
-                  if (goal.reward.isNotEmpty) ...[
+                  if (goal.reward.label.isNotEmpty) ...[
                     const SizedBox(height: 3),
                     Text(
-                      'Reward: ${goal.reward}',
+                      'Reward: ${goal.reward.label}',
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
                   ],

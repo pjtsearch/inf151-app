@@ -142,10 +142,10 @@ pw.Widget _buildCard(Goal goal, int totalHoles, int cardIndex, int cardCount) {
               maxLines: 1,
               style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey700),
             ),
-            if (goal.reward.isNotEmpty) ...[
+            if (goal.reward.label.isNotEmpty) ...[
               pw.SizedBox(height: 0.5 * PdfPageFormat.mm),
               pw.Text(
-                'Reward: ${goal.reward}',
+                'Reward: ${goal.reward.label}',
                 maxLines: 1,
                 overflow: pw.TextOverflow.clip,
                 style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700),

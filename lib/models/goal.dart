@@ -2,6 +2,46 @@ enum FrequencyUnit { day, week, month }
 
 enum DurationUnit { day, week, month }
 
+sealed class GoalReward {
+  const GoalReward();
+  String get label;
+  Map<String, Object?> toJson();
+
+  factory GoalReward.fromJson(Object? value) {
+    if (value is Map<String, dynamic>) {
+      if (value['type'] == 'etsy') return EtsyProductReward.fromJson(value);
+      return FreeTextReward(value['text'] as String? ?? '');
+    }
+    return FreeTextReward(value as String? ?? '');
+  }
+}
+
+class FreeTextReward extends GoalReward {
+  const FreeTextReward(this.text);
+  final String text;
+  @override
+  String get label => text;
+  @override
+  Map<String, Object?> toJson() => {'type': 'text', 'text': text};
+}
+
+class EtsyProductReward extends GoalReward {
+  const EtsyProductReward({required this.listingId, required this.title, required this.url, this.price = '', this.imageUrl = ''});
+  final String listingId;
+  final String title;
+  final String url;
+  final String price;
+  final String imageUrl;
+  @override
+  String get label => title;
+  @override
+  Map<String, Object?> toJson() => {'type': 'etsy', 'listingId': listingId, 'title': title, 'url': url, 'price': price, 'imageUrl': imageUrl};
+  factory EtsyProductReward.fromJson(Map<String, dynamic> json) => EtsyProductReward(
+    listingId: json['listingId'] as String? ?? '', title: json['title'] as String? ?? '',
+    url: json['url'] as String? ?? '', price: json['price'] as String? ?? '', imageUrl: json['imageUrl'] as String? ?? '',
+  );
+}
+
 class Goal {
   const Goal({
     required this.id,
@@ -11,7 +51,7 @@ class Goal {
     required this.duration,
     required this.durationUnit,
     required this.startDate,
-    this.reward = '',
+    this.reward = const FreeTextReward(''),
     this.completedTasks = 0,
   });
 
@@ -22,7 +62,7 @@ class Goal {
   final int duration;
   final DurationUnit durationUnit;
   final DateTime startDate;
-  final String reward;
+  final GoalReward reward;
   final int completedTasks;
 
   int get totalTasks {
@@ -84,7 +124,7 @@ class Goal {
     int? duration,
     DurationUnit? durationUnit,
     DateTime? startDate,
-    String? reward,
+    GoalReward? reward,
     int? completedTasks,
   }) => Goal(
     id: id ?? this.id,
@@ -106,7 +146,7 @@ class Goal {
     'duration': duration,
     'durationUnit': durationUnit.name,
     'startDate': startDate.toIso8601String(),
-    'reward': reward,
+    'reward': reward.toJson(),
     'completedTasks': completedTasks,
   };
 
@@ -118,7 +158,7 @@ class Goal {
     duration: json['duration'] as int,
     durationUnit: DurationUnit.values.byName(json['durationUnit'] as String),
     startDate: DateTime.parse(json['startDate'] as String),
-    reward: json['reward'] as String? ?? '',
+    reward: GoalReward.fromJson(json['reward']),
     completedTasks: json['completedTasks'] as int? ??
         ((json['isCompleted'] as bool? ?? false) ? _legacyCompletedTaskCount(json) : 0),
   );

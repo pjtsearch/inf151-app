@@ -15,6 +15,7 @@ class GoalStorage {
     try {
       return (jsonDecode(data) as List<dynamic>)
           .map((item) => Goal.fromJson(item as Map<String, dynamic>))
+          .map((item) => item.copyWith(completedTasks: 0)) // TODO: Remove
           .toList();
     } on FormatException {
       return [];

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../models/goal.dart';
 import '../utils/goal_date_utils.dart';
+import 'etsy_picker_dialog.dart';
 
 class GoalFormSheet extends StatefulWidget {
   const GoalFormSheet({super.key, this.goal, this.isCopy = false});
@@ -23,13 +24,15 @@ class _GoalFormSheetState extends State<GoalFormSheet> {
   late FrequencyUnit _frequencyUnit;
   late DurationUnit _durationUnit;
   late DateTime _startDate;
+  EtsyProductReward? _etsyReward;
 
   @override
   void initState() {
     super.initState();
     final goal = widget.goal;
     _titleController = TextEditingController(text: goal?.title ?? '');
-    _rewardController = TextEditingController(text: goal?.reward ?? '');
+    _etsyReward = goal?.reward is EtsyProductReward ? goal!.reward as EtsyProductReward : null;
+    _rewardController = TextEditingController(text: _etsyReward?.title ?? (goal?.reward as FreeTextReward?)?.text ?? '');
     _frequencyController = TextEditingController(
       text: '${goal?.frequency ?? 1}',
     );
@@ -61,7 +64,7 @@ class _GoalFormSheetState extends State<GoalFormSheet> {
         duration: int.parse(_durationController.text),
         durationUnit: _durationUnit,
         startDate: _startDate,
-        reward: _rewardController.text.trim(),
+        reward: _etsyReward ?? FreeTextReward(_rewardController.text.trim()),
         completedTasks: current?.completedTasks ?? 0,
       ),
     );
@@ -109,15 +112,33 @@ class _GoalFormSheetState extends State<GoalFormSheet> {
                         : null,
                   ),
                   const SizedBox(height: 16),
-                  TextFormField(
-                    controller: _rewardController,
-                    textCapitalization: TextCapitalization.sentences,
-                    decoration: const InputDecoration(
-                      labelText: 'Reward',
-                      hintText: 'A relaxing afternoon',
-                      border: OutlineInputBorder(),
+                  Row(children: [
+                    Expanded(child: TextFormField(
+                      controller: _rewardController,
+                      readOnly: _etsyReward != null,
+                      onChanged: (_) { if (_etsyReward != null) setState(() => _etsyReward = null); },
+                      textCapitalization: TextCapitalization.sentences,
+                      decoration: InputDecoration(
+                        labelText: _etsyReward == null ? 'Write-in reward' : 'Etsy product',
+                        hintText: 'A relaxing afternoon',
+                        border: const OutlineInputBorder(),
+                        suffixIcon: _etsyReward == null ? null : IconButton(tooltip: 'Remove Etsy product', onPressed: () => setState(() { _etsyReward = null; _rewardController.clear(); }), icon: const Icon(Icons.close)),
+                      ),
+                    )),
+                    const SizedBox(width: 8),
+                      FilledButton.tonalIcon(
+                        style: FilledButton.styleFrom(
+                          minimumSize: const Size(96, 56),
+                          padding: const EdgeInsets.symmetric(horizontal: 14),
+                        ),
+                      onPressed: () async {
+                        final reward = await showDialog<EtsyProductReward>(context: context, builder: (_) => const EtsyPickerDialog());
+                        if (reward != null) setState(() { _etsyReward = reward; _rewardController.text = reward.title; });
+                      },
+                      icon: const Icon(Icons.storefront_outlined),
+                        label: const Text('Etsy Reward'),
                     ),
-                  ),
+                  ]),
                   const SizedBox(height: 16),
                   Row(
                     children: [
