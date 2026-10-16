@@ -13,7 +13,7 @@ Future<int> readPunchCount(String imagePath) async {
   final bytes = await File(imagePath).readAsBytes();
   final uri = Uri.https(
     'generativelanguage.googleapis.com',
-    '/v1beta/models/gemini-3.1-flash-lite:generateContent',
+    '/v1beta/models/gemini-3.5-flash-lite:generateContent',
   );
   final response = await http.post(
     uri,
@@ -27,7 +27,8 @@ Future<int> readPunchCount(String imagePath) async {
           'parts': [
             {
               'text':
-                  'How many of the holes on this card have been hole-punched. '
+                  'All of the holes on this punch card were originally white inside. '
+                  'How many of the holes on this card have either been hole-punched or colored in black? '
                   'Make sure to look look carefully. Return just the number '
                   'by itself and nothing else.',
             },
