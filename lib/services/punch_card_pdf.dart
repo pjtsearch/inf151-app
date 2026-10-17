@@ -121,8 +121,8 @@ pw.Widget _buildCard(Goal goal, int totalHoles, int cardIndex, int cardCount) {
           child: pw.BarcodeWidget(
             barcode: barcode.Barcode.dataMatrix(),
             data: '${goal.id}\t$firstHole\t${firstHole + holesOnCard - 1}',
-            width: 7 * PdfPageFormat.mm,
-            height: 7 * PdfPageFormat.mm,
+            width: 10 * PdfPageFormat.mm,
+            height: 10 * PdfPageFormat.mm,
             drawText: false,
           ),
         ),

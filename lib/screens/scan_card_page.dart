@@ -2,7 +2,7 @@ import 'dart:io';
 
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
-import 'package:google_mlkit_barcode_scanning/google_mlkit_barcode_scanning.dart';
+import 'package:flutter_zxing/flutter_zxing.dart';
 
 import '../models/goal.dart';
 import '../services/gemini_punch_reader.dart';
@@ -18,9 +18,7 @@ class ScanCardPage extends StatefulWidget {
 
 class _ScanCardPageState extends State<ScanCardPage> {
   CameraController? _camera;
-  final _barcodeScanner = BarcodeScanner(
-    formats: const [BarcodeFormat.dataMatrix],
-  );
+  final _zxing = Zxing();
   bool _loading = false;
   String? _frozenFramePath;
   String? _cameraError;
@@ -66,16 +64,22 @@ class _ScanCardPageState extends State<ScanCardPage> {
       final image = await camera.takePicture();
       if (!mounted) return;
       setState(() => _frozenFramePath = image.path);
-      final input = InputImage.fromFilePath(image.path);
-      final barcodes = await _barcodeScanner.processImage(input);
-      final value = barcodes
-          .where((barcode) => barcode.format == BarcodeFormat.dataMatrix)
-          .map((barcode) => barcode.rawValue)
-          .whereType<String>()
+      final results = await _zxing.readBarcodesImagePath(
+        XFile(image.path),
+        DecodeParams(
+          format: Format.dataMatrix,
+          tryHarder: true,
+          maxSize: 4096,
+          tryInverted: true,
+        ),
+      );
+      final value = results.codes
+          .where((code) => code.isValid)
+          .map((code) => code.text)
           .firstOrNull;
       final card = value == null ? null : _parseCard(value);
       if (card == null) {
-        await _showError('Invalid task card. Scan an active task card.');
+        await _showError('Could not scan task card. Try again.');
         return;
       }
 
@@ -145,7 +149,6 @@ class _ScanCardPageState extends State<ScanCardPage> {
   @override
   void dispose() {
     _camera?.dispose();
-    _barcodeScanner.close();
     super.dispose();
   }
 

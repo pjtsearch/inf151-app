@@ -40,7 +40,7 @@ dependencies:
   barcode: ^2.2.9
   camera: ^0.12.1
   flutter_dotenv: ^6.0.1
-  google_mlkit_barcode_scanning: ^0.16.1
+  flutter_zxing: ^3.1.0
   http: ^1.6.0
 
 dev_dependencies:
