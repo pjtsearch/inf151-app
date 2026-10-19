@@ -140,9 +140,12 @@ class _GoalsPageState extends State<GoalsPage> {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Goals')),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : Column(
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          _loading
+              ? const Center(child: CircularProgressIndicator())
+              : Column(
               children: [
                 Padding(
                   padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
@@ -161,7 +164,7 @@ class _GoalsPageState extends State<GoalsPage> {
                   child: goals.isEmpty
                       ? EmptyGoals(isPast: _showPast)
                       : ListView.separated(
-                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 96),
+                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 184),
                           itemCount: goals.length,
                           separatorBuilder: (_, _) =>
                               const SizedBox(height: 10),
@@ -176,24 +179,72 @@ class _GoalsPageState extends State<GoalsPage> {
                 ),
               ],
             ),
-      floatingActionButton: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          FloatingActionButton.extended(
-            heroTag: 'scan-card',
-            onPressed: _scanCard,
-            icon: const Icon(Icons.document_scanner_outlined),
-            label: const Text('Scan card'),
-          ),
-          const SizedBox(width: 12),
-          FloatingActionButton.extended(
-            heroTag: 'add-goal',
-            onPressed: () => _editGoal(),
-            icon: const Icon(Icons.add),
-            label: const Text('Add goal'),
-          ),
+          if (!_loading)
+            const _BottomSurfaceGradient(),
         ],
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: SizedBox(
+          width: double.infinity,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              SizedBox(
+                height: 56,
+                child: FilledButton.icon(
+                  style: FilledButton.styleFrom(
+                    foregroundColor:
+                        Theme.of(context).colorScheme.onSecondaryContainer,
+                    backgroundColor:
+                        Theme.of(context).colorScheme.secondaryContainer,
+                  ),
+                  onPressed: _scanCard,
+                  icon: const Icon(Icons.document_scanner_outlined),
+                  label: const Text('Scan card'),
+                ),
+              ),
+              const SizedBox(height: 10),
+              SizedBox(
+                height: 56,
+                child: FilledButton.icon(
+                  onPressed: () => _editGoal(),
+                  icon: const Icon(Icons.add),
+                  label: const Text('Add goal'),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
+}
+
+class _BottomSurfaceGradient extends StatelessWidget {
+  const _BottomSurfaceGradient();
+
+  @override
+  Widget build(BuildContext context) => Positioned(
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: 200,
+    child: IgnorePointer(
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Theme.of(context).colorScheme.surface.withValues(alpha: 0),
+              Theme.of(context).colorScheme.surface,
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
 }
