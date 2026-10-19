@@ -28,10 +28,18 @@ class GoalCard extends StatelessWidget {
     };
     final endDate = goal.endDate.subtract(const Duration(days: 1));
 
+    final totalTasks = goal.totalTasks;
+    final completedTasks = goal.completedTasks.clamp(0, totalTasks);
+    final progress = totalTasks == 0 ? 0.0 : completedTasks / totalTasks;
+
     return Card(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 14, 8, 14),
-        child: Row(
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 8, 14),
+            child: Row(
           children: [
             Expanded(
               child: Column(
@@ -62,7 +70,7 @@ class GoalCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    '${goal.completedTasks.clamp(0, goal.totalTasks)} tasks/${goal.totalTasks} completed',
+                    '$completedTasks tasks/$totalTasks completed',
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                 ],
@@ -89,8 +97,15 @@ class GoalCard extends StatelessWidget {
               ],
             ),
           ],
+            ),
+          ),
+          LinearProgressIndicator(
+            value: progress,
+            minHeight: 5,
+            backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+          ),
+        ],
         ),
-      ),
     );
   }
 }
