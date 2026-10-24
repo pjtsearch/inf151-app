@@ -1,6 +1,6 @@
 {
-    "name": "inf151_app",
-    "short_name": "inf151_app",
+    "name": "GoalPunch",
+    "short_name": "GoalPunch",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#F5EF9F",

@@ -15,7 +15,7 @@ class GoalApp extends StatelessWidget {
     );
 
     return MaterialApp(
-      title: 'Goals',
+      title: 'GoalPunch',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,
