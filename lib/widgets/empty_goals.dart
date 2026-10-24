@@ -15,7 +15,7 @@ class EmptyGoals extends StatelessWidget {
           Icon(
             isPast ? Icons.history_rounded : Icons.flag_outlined,
             size: 40,
-            color: Theme.of(context).colorScheme.primary,
+            color: Theme.of(context).colorScheme.onPrimaryContainer,
           ),
           const SizedBox(height: 12),
           Text(

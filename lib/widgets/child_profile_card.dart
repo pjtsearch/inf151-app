@@ -26,7 +26,7 @@ class ChildProfileCard extends StatelessWidget {
           child.name.characters.firstOrNull?.toUpperCase() ?? '?',
           style: Theme.of(
             context,
-          ).textTheme.displaySmall?.copyWith(color: colors.primary),
+          ).textTheme.displaySmall?.copyWith(color: colors.onPrimaryContainer),
         ),
       ),
     );
@@ -36,7 +36,7 @@ class ChildProfileCard extends StatelessWidget {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
         side: isDropTarget
-            ? BorderSide(color: colors.primary, width: 2)
+            ? BorderSide(color: colors.onPrimaryContainer, width: 2)
             : BorderSide.none,
       ),
       clipBehavior: Clip.antiAlias,

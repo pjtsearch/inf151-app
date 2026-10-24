@@ -156,7 +156,7 @@ class _ManageChildrenPageState extends State<ManageChildrenPage> {
                       itemBuilder: (context, index) {
                         if (index == _children.length) {
                           return Material(
-                            color: const Color(0xFFDFF2EA),
+                            color: colors.primaryContainer,
                             borderRadius: BorderRadius.circular(20),
                             clipBehavior: Clip.antiAlias,
                             child: InkWell(
@@ -167,7 +167,7 @@ class _ManageChildrenPageState extends State<ManageChildrenPage> {
                                   Icon(
                                     Icons.add,
                                     size: 32,
-                                    color: colors.primary,
+                                    color: colors.onPrimaryContainer,
                                   ),
                                   const SizedBox(height: 12),
                                   Text(
@@ -175,7 +175,9 @@ class _ManageChildrenPageState extends State<ManageChildrenPage> {
                                     style: Theme.of(context)
                                         .textTheme
                                         .titleSmall
-                                        ?.copyWith(color: colors.primary),
+                                        ?.copyWith(
+                                          color: colors.onPrimaryContainer,
+                                        ),
                                   ),
                                 ],
                               ),

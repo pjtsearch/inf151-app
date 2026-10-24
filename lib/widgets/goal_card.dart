@@ -27,7 +27,7 @@ class GoalCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
-    const tint = Color(0xFFDFF2EA);
+    final tint = colors.primaryContainer;
     final endDate = goal.endDate.subtract(const Duration(days: 1));
     final totalTasks = goal.totalTasks;
     final completedTasks = goal.completedTasks.clamp(0, totalTasks);
@@ -71,7 +71,7 @@ class GoalCard extends StatelessWidget {
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: theme.textTheme.labelMedium?.copyWith(
-                                  color: colors.primary,
+                                  color: colors.onPrimaryContainer,
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
@@ -136,7 +136,7 @@ class GoalCard extends StatelessWidget {
                 child: Text(
                   'Reward · ${goal.reward.label}',
                   style: theme.textTheme.bodyMedium?.copyWith(
-                    color: colors.primary,
+                    color: colors.onPrimaryContainer,
                   ),
                 ),
               ),
@@ -146,8 +146,8 @@ class GoalCard extends StatelessWidget {
               value: progress,
               minHeight: 8,
               borderRadius: BorderRadius.circular(8),
-              color: colors.primary,
-              backgroundColor: const Color(0xFFE0E7E2),
+              color: colors.onPrimaryContainer,
+              backgroundColor: colors.surfaceContainerHighest,
               trackGap: 0,
               stopIndicatorRadius: 0,
               semanticsLabel:
@@ -162,7 +162,7 @@ class GoalCard extends StatelessWidget {
                 Text(
                   '$completedTasks / $totalTasks completed',
                   style: theme.textTheme.labelLarge?.copyWith(
-                    color: colors.primary,
+                    color: colors.onPrimaryContainer,
                   ),
                 ),
                 Text(

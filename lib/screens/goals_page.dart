@@ -318,7 +318,12 @@ class _GoalsPageState extends State<GoalsPage>
                               dividerHeight: 0,
                               indicatorSize: TabBarIndicatorSize.tab,
                               indicatorWeight: 2,
-                              labelColor: Theme.of(context).colorScheme.primary,
+                              labelColor: Theme.of(
+                                context,
+                              ).colorScheme.onPrimaryContainer,
+                              indicatorColor: Theme.of(
+                                context,
+                              ).colorScheme.onPrimaryContainer,
                               unselectedLabelColor: Theme.of(
                                 context,
                               ).colorScheme.onSurfaceVariant,

@@ -73,7 +73,7 @@ class ChildrenChips extends StatelessWidget {
             const SizedBox(width: 8),
           ],
           ActionChip(
-            avatar: const Icon(Icons.add, size: 20),
+            avatar: Icon(Icons.add, size: 20, color: colors.onSurfaceVariant),
             label: const Text('Add child'),
             onPressed: onAddChild,
           ),
