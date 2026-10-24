@@ -119,82 +119,109 @@ pw.Widget _buildCard(
       border: pw.Border.all(color: PdfColors.grey600, width: 0.7),
       borderRadius: pw.BorderRadius.circular(2 * PdfPageFormat.mm),
     ),
-    child: pw.Stack(
+    child: pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.stretch,
       children: [
-        pw.Positioned(
-          top: 0,
-          right: 0,
-          child: pw.BarcodeWidget(
-            barcode: barcode.Barcode.dataMatrix(),
-            data: '${goal.id}\t$firstHole\t${firstHole + holesOnCard - 1}',
-            width: 10 * PdfPageFormat.mm,
-            height: 10 * PdfPageFormat.mm,
-            drawText: false,
+        pw.Expanded(
+          child: _buildCardHeader(
+            goal,
+            childName,
+            firstHole,
+            holesOnCard,
+            cardIndex,
+            cardCount,
           ),
         ),
-        if (childName != null)
-          pw.Positioned(
-            top: 0,
-            left: 0,
-            right: 12 * PdfPageFormat.mm,
-            child: pw.Text(
-              childName,
-              maxLines: 1,
-              overflow: pw.TextOverflow.clip,
-              style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey700),
-            ),
-          ),
-        pw.Column(
-          mainAxisAlignment: pw.MainAxisAlignment.end,
-          crossAxisAlignment: pw.CrossAxisAlignment.stretch,
-          children: [
-            if (childName != null) pw.SizedBox(height: 5 * PdfPageFormat.mm),
-            pw.Text(
-              goal.title,
-              maxLines: 1,
-              overflow: pw.TextOverflow.clip,
-              style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold),
-            ),
-            pw.SizedBox(height: 1 * PdfPageFormat.mm),
-            pw.Text(
-              '${goal.frequencyDescription}  |  ${goal.duration} ${goal.durationUnit.name}${goal.duration == 1 ? '' : 's'}  |  Card ${cardIndex + 1} of $cardCount',
-              maxLines: 1,
-              style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey700),
-            ),
-            if (goal.reward.label.isNotEmpty) ...[
-              pw.SizedBox(height: 0.5 * PdfPageFormat.mm),
-              pw.Text(
-                'Reward: ${goal.reward.label}',
-                maxLines: 1,
-                overflow: pw.TextOverflow.clip,
-                style: const pw.TextStyle(
-                  fontSize: 9,
-                  color: PdfColors.grey700,
-                ),
+        pw.SizedBox(height: 2 * PdfPageFormat.mm),
+        for (var row = 0; row < punchCardMaxRows; row++)
+          if (row * punchCardColumnsPerRow < holesOnCard) ...[
+            _buildPunchRow(
+              goal,
+              firstHole + row * punchCardColumnsPerRow,
+              math.min(
+                punchCardColumnsPerRow,
+                holesOnCard - row * punchCardColumnsPerRow,
               ),
-            ],
-            pw.SizedBox(height: 2 * PdfPageFormat.mm),
-            pw.Spacer(flex: 3),
-            for (var row = 0; row < punchCardMaxRows; row++)
-              if (row * punchCardColumnsPerRow < holesOnCard) ...[
-                _buildPunchRow(
-                  goal,
-                  firstHole + row * punchCardColumnsPerRow,
-                  math.min(
-                    punchCardColumnsPerRow,
-                    holesOnCard - row * punchCardColumnsPerRow,
-                  ),
-                ),
-                if (row < punchCardMaxRows - 1 &&
-                    holesOnCard > (row + 1) * punchCardColumnsPerRow)
-                  pw.SizedBox(height: 1 * PdfPageFormat.mm),
-              ],
+            ),
+            if (row < punchCardMaxRows - 1 &&
+                holesOnCard > (row + 1) * punchCardColumnsPerRow)
+              pw.SizedBox(height: 1 * PdfPageFormat.mm),
           ],
-        ),
       ],
     ),
   );
 }
+
+pw.Widget _buildCardHeader(
+  Goal goal,
+  String? childName,
+  int firstHole,
+  int holesOnCard,
+  int cardIndex,
+  int cardCount,
+) => pw.Column(
+  crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+  children: [
+    pw.Row(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        pw.Expanded(
+          child: pw.Column(
+            mainAxisSize: pw.MainAxisSize.min,
+            crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+            children: [
+              if (childName != null) ...[
+                pw.Text(
+                  childName,
+                  maxLines: 1,
+                  overflow: pw.TextOverflow.clip,
+                  style: const pw.TextStyle(
+                    fontSize: 9,
+                    color: PdfColors.grey700,
+                  ),
+                ),
+                pw.SizedBox(height: 0.5 * PdfPageFormat.mm),
+              ],
+              pw.Text(
+                goal.title,
+                maxLines: 1,
+                overflow: pw.TextOverflow.clip,
+                style: pw.TextStyle(
+                  fontSize: 12,
+                  fontWeight: pw.FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        ),
+        pw.SizedBox(width: 2 * PdfPageFormat.mm),
+        pw.BarcodeWidget(
+          barcode: barcode.Barcode.dataMatrix(),
+          data: '${goal.id}\t$firstHole\t${firstHole + holesOnCard - 1}',
+          width: 10 * PdfPageFormat.mm,
+          height: 10 * PdfPageFormat.mm,
+          drawText: false,
+        ),
+      ],
+    ),
+    pw.SizedBox(height: 0.75 * PdfPageFormat.mm),
+    pw.Text(
+      '${goal.frequencyDescription}  |  ${goal.duration} ${goal.durationUnit.name}${goal.duration == 1 ? '' : 's'}  |  Card ${cardIndex + 1} of $cardCount',
+      maxLines: 1,
+      overflow: pw.TextOverflow.clip,
+      style: const pw.TextStyle(fontSize: 8.5, color: PdfColors.grey700),
+    ),
+    if (goal.reward.label.isNotEmpty) ...[
+      pw.SizedBox(height: 0.5 * PdfPageFormat.mm),
+      pw.Text(
+        'Reward: ${goal.reward.label}',
+        maxLines: 1,
+        overflow: pw.TextOverflow.clip,
+        style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700),
+      ),
+    ],
+  ],
+);
 
 pw.Widget _buildPunchRow(Goal goal, int firstHole, int holeCount) {
   return pw.Center(
