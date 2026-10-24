@@ -35,15 +35,15 @@ class ChildrenChips extends StatelessWidget {
                 Icons.people_outline,
                 size: 20,
                 color: selectedChildId == null
-                    ? colors.onPrimary
+                    ? colors.onPrimaryContainer
                     : colors.onSurfaceVariant,
               ),
               label: const Text('All children'),
               selected: selectedChildId == null,
-              selectedColor: colors.primary,
+              selectedColor: colors.primaryContainer,
               labelStyle: TextStyle(
                 color: selectedChildId == null
-                    ? colors.onPrimary
+                    ? colors.onPrimaryContainer
                     : colors.onSurfaceVariant,
               ),
               side: selectedChildId == null ? BorderSide.none : null,
@@ -60,10 +60,10 @@ class ChildrenChips extends StatelessWidget {
                 child: Text(child.name, overflow: TextOverflow.ellipsis),
               ),
               selected: selectedChildId == child.id,
-              selectedColor: colors.primary,
+              selectedColor: colors.primaryContainer,
               labelStyle: TextStyle(
                 color: selectedChildId == child.id
-                    ? colors.onPrimary
+                    ? colors.onPrimaryContainer
                     : colors.onSurfaceVariant,
               ),
               side: selectedChildId == child.id ? BorderSide.none : null,

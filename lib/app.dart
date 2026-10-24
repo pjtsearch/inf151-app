@@ -7,11 +7,10 @@ class GoalApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const primary = Color(0xFFF5EF9F);
-    final palette = ColorScheme.fromSeed(seedColor: primary);
-    final colors = palette.copyWith(
-      primary: primary,
-      onPrimary: palette.onPrimaryContainer,
+    const brandColor = Color(0xFFF5EF9F);
+    final colors = ColorScheme.fromSeed(
+      seedColor: brandColor,
+      primaryContainer: brandColor,
     );
 
     return MaterialApp(
@@ -20,8 +19,9 @@ class GoalApp extends StatelessWidget {
       theme: ThemeData(
         useMaterial3: true,
         colorScheme: colors,
-        textButtonTheme: TextButtonThemeData(
-          style: TextButton.styleFrom(
+        filledButtonTheme: FilledButtonThemeData(
+          style: FilledButton.styleFrom(
+            backgroundColor: colors.primaryContainer,
             foregroundColor: colors.onPrimaryContainer,
           ),
         ),
