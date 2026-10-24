@@ -257,7 +257,25 @@ class _GoalsPageState extends State<GoalsPage>
           CustomScrollView(
             slivers: [
               SliverAppBar.large(
-                title: const Text('Goals'),
+                title: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Image.asset(
+                      'assets/branding/holepunch.png',
+                      width: 32,
+                      height: 32,
+                      excludeFromSemantics: true,
+                    ),
+                    const SizedBox(width: 8),
+                    const Flexible(
+                      child: Text(
+                        'GoalPunch',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
                 pinned: true,
                 actions: [
                   IconButton(
