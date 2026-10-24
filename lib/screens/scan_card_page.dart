@@ -187,7 +187,7 @@ class _ScanCardPageState extends State<ScanCardPage> {
                   left: 20,
                   right: 20,
                   child: Text(
-                    'Center the card’s data matrix in the camera view.',
+                    'Center the card in the camera view.',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       color: Colors.white,
@@ -197,16 +197,21 @@ class _ScanCardPageState extends State<ScanCardPage> {
                 ),
               if (!_loading && _cameraError == null)
                 Positioned(
-                  left: 24,
-                  right: 24,
-                  bottom: 32,
-                  child: Center(
-                    child: FilledButton.icon(
-                      onPressed: camera?.value.isInitialized == true
-                          ? _scan
-                          : null,
-                      icon: const Icon(Icons.document_scanner),
-                      label: const Text('Scan'),
+                  left: 16,
+                  right: 16,
+                  bottom: 16,
+                  child: SafeArea(
+                    top: false,
+                    child: SizedBox(
+                      width: double.infinity,
+                      height: 56,
+                      child: FilledButton.icon(
+                        onPressed: camera?.value.isInitialized == true
+                            ? _scan
+                            : null,
+                        icon: const Icon(Icons.document_scanner),
+                        label: const Text('Scan'),
+                      ),
                     ),
                   ),
                 ),

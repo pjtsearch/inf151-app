@@ -26,7 +26,13 @@ class FreeTextReward extends GoalReward {
 }
 
 class EtsyProductReward extends GoalReward {
-  const EtsyProductReward({required this.listingId, required this.title, required this.url, this.price = '', this.imageUrl = ''});
+  const EtsyProductReward({
+    required this.listingId,
+    required this.title,
+    required this.url,
+    this.price = '',
+    this.imageUrl = '',
+  });
   final String listingId;
   final String title;
   final String url;
@@ -35,35 +41,55 @@ class EtsyProductReward extends GoalReward {
   @override
   String get label => title;
   @override
-  Map<String, Object?> toJson() => {'type': 'etsy', 'listingId': listingId, 'title': title, 'url': url, 'price': price, 'imageUrl': imageUrl};
-  factory EtsyProductReward.fromJson(Map<String, dynamic> json) => EtsyProductReward(
-    listingId: json['listingId'] as String? ?? '', title: json['title'] as String? ?? '',
-    url: json['url'] as String? ?? '', price: json['price'] as String? ?? '', imageUrl: json['imageUrl'] as String? ?? '',
-  );
+  Map<String, Object?> toJson() => {
+    'type': 'etsy',
+    'listingId': listingId,
+    'title': title,
+    'url': url,
+    'price': price,
+    'imageUrl': imageUrl,
+  };
+  factory EtsyProductReward.fromJson(Map<String, dynamic> json) =>
+      EtsyProductReward(
+        listingId: json['listingId'] as String? ?? '',
+        title: json['title'] as String? ?? '',
+        url: json['url'] as String? ?? '',
+        price: json['price'] as String? ?? '',
+        imageUrl: json['imageUrl'] as String? ?? '',
+      );
 }
 
 class Goal {
   const Goal({
     required this.id,
+    required this.childId,
     required this.title,
     required this.frequency,
     required this.frequencyUnit,
     required this.duration,
     required this.durationUnit,
     required this.startDate,
+    DateTime? createdAt,
     this.reward = const FreeTextReward(''),
     this.completedTasks = 0,
-  });
+  }) : createdAt = createdAt ?? startDate;
 
   final String id;
+  final String childId;
   final String title;
   final int frequency;
   final FrequencyUnit frequencyUnit;
   final int duration;
   final DurationUnit durationUnit;
   final DateTime startDate;
+  final DateTime createdAt;
   final GoalReward reward;
   final int completedTasks;
+
+  double get progress {
+    final total = totalTasks;
+    return total == 0 ? 0 : completedTasks.clamp(0, total) / total;
+  }
 
   int get totalTasks {
     if (frequency <= 0 || duration <= 0) return 0;
@@ -118,55 +144,67 @@ class Goal {
 
   Goal copyWith({
     String? id,
+    String? childId,
     String? title,
     int? frequency,
     FrequencyUnit? frequencyUnit,
     int? duration,
     DurationUnit? durationUnit,
     DateTime? startDate,
+    DateTime? createdAt,
     GoalReward? reward,
     int? completedTasks,
   }) => Goal(
     id: id ?? this.id,
+    childId: childId ?? this.childId,
     title: title ?? this.title,
     frequency: frequency ?? this.frequency,
     frequencyUnit: frequencyUnit ?? this.frequencyUnit,
     duration: duration ?? this.duration,
     durationUnit: durationUnit ?? this.durationUnit,
     startDate: startDate ?? this.startDate,
+    createdAt: createdAt ?? this.createdAt,
     reward: reward ?? this.reward,
     completedTasks: completedTasks ?? this.completedTasks,
   );
 
   Map<String, Object> toJson() => {
     'id': id,
+    'childId': childId,
     'title': title,
     'frequency': frequency,
     'frequencyUnit': frequencyUnit.name,
     'duration': duration,
     'durationUnit': durationUnit.name,
     'startDate': startDate.toIso8601String(),
+    'createdAt': createdAt.toIso8601String(),
     'reward': reward.toJson(),
     'completedTasks': completedTasks,
   };
 
   factory Goal.fromJson(Map<String, dynamic> json) => Goal(
     id: json['id'] as String,
+    childId: json['childId'] as String? ?? '',
     title: json['title'] as String,
     frequency: json['frequency'] as int,
     frequencyUnit: FrequencyUnit.values.byName(json['frequencyUnit'] as String),
     duration: json['duration'] as int,
     durationUnit: DurationUnit.values.byName(json['durationUnit'] as String),
     startDate: DateTime.parse(json['startDate'] as String),
+    createdAt: DateTime.tryParse(json['createdAt'] as String? ?? ''),
     reward: GoalReward.fromJson(json['reward']),
-    completedTasks: json['completedTasks'] as int? ??
-        ((json['isCompleted'] as bool? ?? false) ? _legacyCompletedTaskCount(json) : 0),
+    completedTasks:
+        json['completedTasks'] as int? ??
+        ((json['isCompleted'] as bool? ?? false)
+            ? _legacyCompletedTaskCount(json)
+            : 0),
   );
 }
 
 int _legacyCompletedTaskCount(Map<String, dynamic> json) {
   final goal = Goal(
     id: json['id'] as String,
+    childId: json['childId'] as String? ?? '',
     title: json['title'] as String,
     frequency: json['frequency'] as int,
     frequencyUnit: FrequencyUnit.values.byName(json['frequencyUnit'] as String),

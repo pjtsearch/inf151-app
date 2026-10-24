@@ -1,13 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../models/child.dart';
 import '../models/goal.dart';
 import '../utils/goal_date_utils.dart';
+import 'children_chips.dart';
 import 'etsy_picker_dialog.dart';
 
 class GoalFormSheet extends StatefulWidget {
-  const GoalFormSheet({super.key, this.goal, this.isCopy = false});
+  const GoalFormSheet({
+    super.key,
+    required this.children,
+    required this.onAddChild,
+    this.initialChildId,
+    this.goal,
+    this.isCopy = false,
+  });
 
+  final List<Child> children;
+  final Future<Child?> Function() onAddChild;
+  final String? initialChildId;
   final Goal? goal;
   final bool isCopy;
 
@@ -17,6 +29,10 @@ class GoalFormSheet extends StatefulWidget {
 
 class _GoalFormSheetState extends State<GoalFormSheet> {
   final _formKey = GlobalKey<FormState>();
+  final _childFieldKey = GlobalKey<FormFieldState<String>>();
+  late final List<Child> _children;
+  String? _selectedChildId;
+  bool _addingChild = false;
   late final TextEditingController _titleController;
   late final TextEditingController _rewardController;
   late final TextEditingController _frequencyController;
@@ -30,9 +46,20 @@ class _GoalFormSheetState extends State<GoalFormSheet> {
   void initState() {
     super.initState();
     final goal = widget.goal;
+    _children = List.of(widget.children);
+    final initialChildId = widget.initialChildId ?? goal?.childId;
+    _selectedChildId = _children.any((child) => child.id == initialChildId)
+        ? initialChildId
+        : _children.length == 1
+        ? _children.single.id
+        : null;
     _titleController = TextEditingController(text: goal?.title ?? '');
-    _etsyReward = goal?.reward is EtsyProductReward ? goal!.reward as EtsyProductReward : null;
-    _rewardController = TextEditingController(text: _etsyReward?.title ?? (goal?.reward as FreeTextReward?)?.text ?? '');
+    _etsyReward = goal?.reward is EtsyProductReward
+        ? goal!.reward as EtsyProductReward
+        : null;
+    _rewardController = TextEditingController(
+      text: _etsyReward?.title ?? (goal?.reward as FreeTextReward?)?.text ?? '',
+    );
     _frequencyController = TextEditingController(
       text: '${goal?.frequency ?? 1}',
     );
@@ -54,10 +81,13 @@ class _GoalFormSheetState extends State<GoalFormSheet> {
   void _submit() {
     if (!_formKey.currentState!.validate()) return;
     final current = widget.goal;
+    final now = DateTime.now();
     Navigator.pop(
       context,
       Goal(
-        id: current?.id ?? DateTime.now().microsecondsSinceEpoch.toString(),
+        id: current?.id ?? now.microsecondsSinceEpoch.toString(),
+        createdAt: widget.isCopy ? now : current?.createdAt ?? now,
+        childId: _selectedChildId!,
         title: _titleController.text.trim(),
         frequency: int.parse(_frequencyController.text),
         frequencyUnit: _frequencyUnit,
@@ -68,6 +98,21 @@ class _GoalFormSheetState extends State<GoalFormSheet> {
         completedTasks: current?.completedTasks ?? 0,
       ),
     );
+  }
+
+  Future<void> _addChild() async {
+    setState(() => _addingChild = true);
+    try {
+      final child = await widget.onAddChild();
+      if (child == null || !mounted) return;
+      setState(() {
+        _children.add(child);
+        _selectedChildId = child.id;
+        _childFieldKey.currentState!.didChange(child.id);
+      });
+    } finally {
+      if (mounted) setState(() => _addingChild = false);
+    }
   }
 
   @override
@@ -98,6 +143,43 @@ class _GoalFormSheetState extends State<GoalFormSheet> {
                     style: Theme.of(context).textTheme.headlineSmall,
                   ),
                   const SizedBox(height: 20),
+                  FormField<String>(
+                    key: _childFieldKey,
+                    initialValue: _selectedChildId,
+                    validator: (value) =>
+                        _children.any((child) => child.id == value)
+                        ? null
+                        : 'Select a child for this goal',
+                    builder: (field) => Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'For child',
+                          style: Theme.of(context).textTheme.titleSmall,
+                        ),
+                        const SizedBox(height: 4),
+                        ChildrenChips(
+                          children: _children,
+                          selectedChildId: _selectedChildId,
+                          onSelected: (id) => setState(() {
+                            _selectedChildId = id;
+                            field.didChange(id);
+                          }),
+                          onAddChild: _addingChild ? null : _addChild,
+                        ),
+                        if (_children.isEmpty)
+                          const Text('Add a child to create their first goal.'),
+                        if (field.hasError)
+                          Text(
+                            field.errorText!,
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.error,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
                   TextFormField(
                     controller: _titleController,
                     autofocus: true,
@@ -112,33 +194,60 @@ class _GoalFormSheetState extends State<GoalFormSheet> {
                         : null,
                   ),
                   const SizedBox(height: 16),
-                  Row(children: [
-                    Expanded(child: TextFormField(
-                      controller: _rewardController,
-                      readOnly: _etsyReward != null,
-                      onChanged: (_) { if (_etsyReward != null) setState(() => _etsyReward = null); },
-                      textCapitalization: TextCapitalization.sentences,
-                      decoration: InputDecoration(
-                        labelText: _etsyReward == null ? 'Write-in reward' : 'Etsy product',
-                        hintText: 'A relaxing afternoon',
-                        border: const OutlineInputBorder(),
-                        suffixIcon: _etsyReward == null ? null : IconButton(tooltip: 'Remove Etsy product', onPressed: () => setState(() { _etsyReward = null; _rewardController.clear(); }), icon: const Icon(Icons.close)),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextFormField(
+                          controller: _rewardController,
+                          readOnly: _etsyReward != null,
+                          onChanged: (_) {
+                            if (_etsyReward != null) {
+                              setState(() => _etsyReward = null);
+                            }
+                          },
+                          textCapitalization: TextCapitalization.sentences,
+                          decoration: InputDecoration(
+                            labelText: _etsyReward == null
+                                ? 'Write-in reward'
+                                : 'Etsy product',
+                            hintText: 'A relaxing afternoon',
+                            border: const OutlineInputBorder(),
+                            suffixIcon: _etsyReward == null
+                                ? null
+                                : IconButton(
+                                    tooltip: 'Remove Etsy product',
+                                    onPressed: () => setState(() {
+                                      _etsyReward = null;
+                                      _rewardController.clear();
+                                    }),
+                                    icon: const Icon(Icons.close),
+                                  ),
+                          ),
+                        ),
                       ),
-                    )),
-                    const SizedBox(width: 8),
+                      const SizedBox(width: 8),
                       FilledButton.tonalIcon(
                         style: FilledButton.styleFrom(
                           minimumSize: const Size(96, 56),
                           padding: const EdgeInsets.symmetric(horizontal: 14),
                         ),
-                      onPressed: () async {
-                        final reward = await showDialog<EtsyProductReward>(context: context, builder: (_) => const EtsyPickerDialog());
-                        if (reward != null) setState(() { _etsyReward = reward; _rewardController.text = reward.title; });
-                      },
-                      icon: const Icon(Icons.storefront_outlined),
+                        onPressed: () async {
+                          final reward = await showDialog<EtsyProductReward>(
+                            context: context,
+                            builder: (_) => const EtsyPickerDialog(),
+                          );
+                          if (reward != null && mounted) {
+                            setState(() {
+                              _etsyReward = reward;
+                              _rewardController.text = reward.title;
+                            });
+                          }
+                        },
+                        icon: const Icon(Icons.storefront_outlined),
                         label: const Text('Etsy Reward'),
-                    ),
-                  ]),
+                      ),
+                    ],
+                  ),
                   const SizedBox(height: 16),
                   Row(
                     children: [

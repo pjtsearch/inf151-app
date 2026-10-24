@@ -63,7 +63,7 @@ String _monthLabel(DateTime startDate, int offset) {
 
 int punchCountFor(Goal goal) => goal.totalTasks;
 
-Future<Uint8List> buildPunchCardPdf(Goal goal) async {
+Future<Uint8List> buildPunchCardPdf(Goal goal, {String? childName}) async {
   final totalHoles = punchCountFor(goal);
   if (totalHoles == 0) return pw.Document().save();
 
@@ -86,7 +86,7 @@ Future<Uint8List> buildPunchCardPdf(Goal goal) async {
               cardIndex < pageStart + cardsOnPage;
               cardIndex++
             )
-              _buildCard(goal, totalHoles, cardIndex, cardCount),
+              _buildCard(goal, totalHoles, cardIndex, cardCount, childName),
           ],
         ),
       ),
@@ -95,7 +95,13 @@ Future<Uint8List> buildPunchCardPdf(Goal goal) async {
   return document.save();
 }
 
-pw.Widget _buildCard(Goal goal, int totalHoles, int cardIndex, int cardCount) {
+pw.Widget _buildCard(
+  Goal goal,
+  int totalHoles,
+  int cardIndex,
+  int cardCount,
+  String? childName,
+) {
   final holesPerCard = punchCardColumnsPerRow * punchCardMaxRows;
   final firstHole = cardIndex * holesPerCard;
   final holesOnCard = math.min(holesPerCard, totalHoles - firstHole);
@@ -126,10 +132,23 @@ pw.Widget _buildCard(Goal goal, int totalHoles, int cardIndex, int cardCount) {
             drawText: false,
           ),
         ),
+        if (childName != null)
+          pw.Positioned(
+            top: 0,
+            left: 0,
+            right: 12 * PdfPageFormat.mm,
+            child: pw.Text(
+              childName,
+              maxLines: 1,
+              overflow: pw.TextOverflow.clip,
+              style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey700),
+            ),
+          ),
         pw.Column(
           mainAxisAlignment: pw.MainAxisAlignment.end,
           crossAxisAlignment: pw.CrossAxisAlignment.stretch,
           children: [
+            if (childName != null) pw.SizedBox(height: 5 * PdfPageFormat.mm),
             pw.Text(
               goal.title,
               maxLines: 1,
@@ -148,7 +167,10 @@ pw.Widget _buildCard(Goal goal, int totalHoles, int cardIndex, int cardCount) {
                 'Reward: ${goal.reward.label}',
                 maxLines: 1,
                 overflow: pw.TextOverflow.clip,
-                style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700),
+                style: const pw.TextStyle(
+                  fontSize: 9,
+                  color: PdfColors.grey700,
+                ),
               ),
             ],
             pw.SizedBox(height: 2 * PdfPageFormat.mm),
@@ -189,16 +211,14 @@ pw.Widget _buildPunchRow(Goal goal, int firstHole, int holeCount) {
                 width: _holeCellWidth,
                 height: 6 * PdfPageFormat.mm,
                 child: pw.Center(
-                  child: pw.Text(
-                      switch (punchCardLabelForHole(
+                  child: pw.Text(switch (punchCardLabelForHole(
                     goal,
                     firstHole + hole,
                   )) {
                     final label? => label,
                     null => "-",
-                  }, style: const pw.TextStyle(fontSize: 8),
-                    ),
-                  ),
+                  }, style: const pw.TextStyle(fontSize: 8)),
+                ),
               ),
             ),
           for (var hole = 0; hole < holeCount; hole++)
