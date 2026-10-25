@@ -6,6 +6,7 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 
 import '../models/goal.dart';
+import 'punch_card_background.dart';
 
 const punchCardColumnsPerRow = 7;
 const punchCardMaxRows = 2;
@@ -106,47 +107,59 @@ pw.Widget _buildCard(
   final firstHole = cardIndex * holesPerCard;
   final holesOnCard = math.min(holesPerCard, totalHoles - firstHole);
 
-  return pw.Container(
+  return pw.SizedBox(
     width: _cardWidth,
     height: _cardHeight,
-    padding: const pw.EdgeInsets.fromLTRB(
-      4 * PdfPageFormat.mm,
-      3 * PdfPageFormat.mm,
-      4 * PdfPageFormat.mm,
-      4 * PdfPageFormat.mm,
-    ),
-    decoration: pw.BoxDecoration(
-      border: pw.Border.all(color: PdfColors.grey600, width: 0.7),
-      borderRadius: pw.BorderRadius.circular(2 * PdfPageFormat.mm),
-    ),
-    child: pw.Column(
-      crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+    child: pw.Stack(
+      fit: pw.StackFit.expand,
       children: [
-        pw.Expanded(
-          child: _buildCardHeader(
-            goal,
-            childName,
-            firstHole,
-            holesOnCard,
-            cardIndex,
-            cardCount,
+        pw.SvgImage(svg: punchCardBackgroundSvg, fit: pw.BoxFit.fill),
+        pw.Padding(
+          padding: const pw.EdgeInsets.fromLTRB(
+            4 * PdfPageFormat.mm,
+            3 * PdfPageFormat.mm,
+            4 * PdfPageFormat.mm,
+            4 * PdfPageFormat.mm,
+          ),
+          child: pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+            children: [
+              pw.Expanded(
+                child: pw.Transform.translate(
+                  offset: const PdfPoint(0, -1 * PdfPageFormat.mm),
+                  child: pw.Padding(
+                    padding: const pw.EdgeInsets.only(
+                      left: 1 * PdfPageFormat.mm,
+                    ),
+                    child: _buildCardHeader(
+                      goal,
+                      childName,
+                      firstHole,
+                      holesOnCard,
+                      cardIndex,
+                      cardCount,
+                    ),
+                  ),
+                ),
+              ),
+              pw.SizedBox(height: 2 * PdfPageFormat.mm),
+              for (var row = 0; row < punchCardMaxRows; row++)
+                if (row * punchCardColumnsPerRow < holesOnCard) ...[
+                  _buildPunchRow(
+                    goal,
+                    firstHole + row * punchCardColumnsPerRow,
+                    math.min(
+                      punchCardColumnsPerRow,
+                      holesOnCard - row * punchCardColumnsPerRow,
+                    ),
+                  ),
+                  if (row < punchCardMaxRows - 1 &&
+                      holesOnCard > (row + 1) * punchCardColumnsPerRow)
+                    pw.SizedBox(height: 1 * PdfPageFormat.mm),
+                ],
+            ],
           ),
         ),
-        pw.SizedBox(height: 2 * PdfPageFormat.mm),
-        for (var row = 0; row < punchCardMaxRows; row++)
-          if (row * punchCardColumnsPerRow < holesOnCard) ...[
-            _buildPunchRow(
-              goal,
-              firstHole + row * punchCardColumnsPerRow,
-              math.min(
-                punchCardColumnsPerRow,
-                holesOnCard - row * punchCardColumnsPerRow,
-              ),
-            ),
-            if (row < punchCardMaxRows - 1 &&
-                holesOnCard > (row + 1) * punchCardColumnsPerRow)
-              pw.SizedBox(height: 1 * PdfPageFormat.mm),
-          ],
       ],
     ),
   );
@@ -177,7 +190,7 @@ pw.Widget _buildCardHeader(
                   overflow: pw.TextOverflow.clip,
                   style: const pw.TextStyle(
                     fontSize: 9,
-                    color: PdfColors.grey700,
+                    color: PdfColors.black,
                   ),
                 ),
                 pw.SizedBox(height: 0.5 * PdfPageFormat.mm),
@@ -198,8 +211,10 @@ pw.Widget _buildCardHeader(
         pw.BarcodeWidget(
           barcode: barcode.Barcode.dataMatrix(),
           data: '${goal.id}\t$firstHole\t${firstHole + holesOnCard - 1}',
-          width: 10 * PdfPageFormat.mm,
-          height: 10 * PdfPageFormat.mm,
+          width: 11 * PdfPageFormat.mm,
+          height: 11 * PdfPageFormat.mm,
+          padding: const pw.EdgeInsets.all(0.5 * PdfPageFormat.mm),
+          backgroundColor: PdfColors.white,
           drawText: false,
         ),
       ],
@@ -209,7 +224,7 @@ pw.Widget _buildCardHeader(
       '${goal.frequencyDescription}  |  ${goal.duration} ${goal.durationUnit.name}${goal.duration == 1 ? '' : 's'}  |  Card ${cardIndex + 1} of $cardCount',
       maxLines: 1,
       overflow: pw.TextOverflow.clip,
-      style: const pw.TextStyle(fontSize: 8.5, color: PdfColors.grey700),
+      style: const pw.TextStyle(fontSize: 8.5, color: PdfColors.black),
     ),
     if (goal.reward.label.isNotEmpty) ...[
       pw.SizedBox(height: 0.5 * PdfPageFormat.mm),
@@ -217,7 +232,7 @@ pw.Widget _buildCardHeader(
         'Reward: ${goal.reward.label}',
         maxLines: 1,
         overflow: pw.TextOverflow.clip,
-        style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700),
+        style: const pw.TextStyle(fontSize: 9, color: PdfColors.black),
       ),
     ],
   ],
@@ -234,7 +249,7 @@ pw.Widget _buildPunchRow(Goal goal, int firstHole, int holeCount) {
             pw.Positioned(
               left:
                   hole * _holeSlotWidth + (_holeCellWidth - _holeDiameter) / 2,
-              top: 5.5 * PdfPageFormat.mm,
+              top: 4.5 * PdfPageFormat.mm,
               child: _buildHole(
                 punchCardLabelForHole(goal, firstHole + hole) ?? '-',
               ),
@@ -251,11 +266,15 @@ pw.Widget _buildHole(String label) => pw.Container(
   alignment: pw.Alignment.center,
   padding: const pw.EdgeInsets.all(1.5),
   decoration: pw.BoxDecoration(
+    color: PdfColors.white,
     shape: pw.BoxShape.circle,
     border: pw.Border.all(color: PdfColors.black, width: 0.8),
   ),
   child: pw.FittedBox(
     fit: pw.BoxFit.scaleDown,
-    child: pw.Text(label, style: const pw.TextStyle(fontSize: 8)),
+    child: pw.Text(
+      label,
+      style: const pw.TextStyle(fontSize: 8, color: PdfColors.black),
+    ),
   ),
 );

@@ -43,12 +43,20 @@ int _printedHoles(Uint8List bytes) {
   ).allMatches(_pdfContents(bytes)).length;
 }
 
+int _whiteHoleInteriors(Uint8List bytes) {
+  const number = r'-?\d+(?:\.\d+)?\s+';
+  return RegExp(
+    '(?:$number){2}m\\s+(?:(?:$number){6}c\\s+){4}1 1 1 rg\\s+f',
+  ).allMatches(_pdfContents(bytes)).length;
+}
+
 void main() {
   test(
     'a reward and child name leave room for all fourteen printed holes',
     () async {
       final bytes = await buildPunchCardPdf(_goal(), childName: 'Alex');
       expect(_printedHoles(bytes), 14);
+      expect(_whiteHoleInteriors(bytes), 14);
       expect(_pdfContents(bytes), contains('(Reward:)'));
     },
   );
@@ -73,6 +81,7 @@ void main() {
         childName: 'Alexandra Catherine Montgomery',
       );
       expect(_printedHoles(bytes), 14);
+      expect(_whiteHoleInteriors(bytes), 14);
       expect(_pdfContents(bytes), contains('(Reward:)'));
     },
   );
@@ -86,6 +95,11 @@ void main() {
           childName: 'Alex',
         );
         expect(_printedHoles(bytes), tasks, reason: '$tasks tasks');
+        expect(
+          _whiteHoleInteriors(bytes),
+          tasks,
+          reason: 'Every hole needs an opaque white interior',
+        );
       }
     },
   );
@@ -95,5 +109,6 @@ void main() {
       _goal(reward: const FreeTextReward('')),
     );
     expect(_printedHoles(bytes), 14);
+    expect(_whiteHoleInteriors(bytes), 14);
   });
 }
