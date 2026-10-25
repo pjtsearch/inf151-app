@@ -32,7 +32,9 @@ class ChildProfileCard extends StatelessWidget {
     );
 
     return Material(
-      color: isDropTarget ? colors.primaryContainer : Colors.white,
+      color: isDropTarget
+          ? colors.primaryContainer
+          : Theme.of(context).cardTheme.color,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
         side: isDropTarget

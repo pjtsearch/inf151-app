@@ -97,7 +97,7 @@ class _ListingCardState extends State<_ListingCard> {
   }
   @override
   Widget build(BuildContext context) => Card(clipBehavior: Clip.antiAlias, child: InkWell(onTap: widget.onTap, child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-    SizedBox(height: 140, width: double.infinity, child: _url == null ? const ColoredBox(color: Color(0xFFEDEFEA), child: Center(child: Icon(Icons.image_outlined))) : Image.network(_url!, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const Center(child: Icon(Icons.broken_image_outlined)))),
+    SizedBox(height: 140, width: double.infinity, child: _url == null ? ColoredBox(color: Theme.of(context).colorScheme.surfaceContainerHighest, child: const Center(child: Icon(Icons.image_outlined))) : Image.network(_url!, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const Center(child: Icon(Icons.broken_image_outlined)))),
     Padding(padding: const EdgeInsets.all(10), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Text(widget.listing.title, maxLines: 2, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.titleSmall),
       const SizedBox(height: 4), Text(widget.listing.description, maxLines: 2, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.bodySmall),

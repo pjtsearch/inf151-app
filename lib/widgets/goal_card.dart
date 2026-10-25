@@ -34,7 +34,6 @@ class GoalCard extends StatelessWidget {
     final progress = goal.progress;
 
     return Card(
-      color: Colors.white,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       clipBehavior: Clip.antiAlias,
       child: Padding(
