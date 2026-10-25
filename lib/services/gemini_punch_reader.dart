@@ -38,6 +38,7 @@ Future<int> readPunchCount(
                   'Count how many of those positions have been physically hole-punched through the paper '
                   'or deliberately filled in black. Uncompleted positions may contain printed text, '
                   'numbers, day or month labels, or hyphens on a light background. '
+                  'Ignore skipped holes; the holes should be punched out from left to right, top to bottom order. '
                   'Printed labels and circle outlines do not count as completed punches. '
                   'Ignore decorative background artwork and the barcode. '
                   'Account for all $originalHoleCount original positions, including any whose printed '
