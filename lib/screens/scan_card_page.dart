@@ -99,9 +99,13 @@ class _ScanCardPageState extends State<ScanCardPage> {
         return;
       }
 
-      final count = await readPunchCount(image.path);
+      final originalHoleCount = card.end - card.start + 1;
+      final count = await readPunchCount(
+        image.path,
+        originalHoleCount: originalHoleCount,
+      );
       if (!mounted) return;
-      if (count != card.end - card.start + 1) {
+      if (count != originalHoleCount) {
         await _showError(
           'Task card not completed. Scan again once it\'s completed.',
         );

@@ -4,7 +4,17 @@ import 'dart:io';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 
-Future<int> readPunchCount(String imagePath) async {
+Future<int> readPunchCount(
+  String imagePath, {
+  required int originalHoleCount,
+}) async {
+  if (originalHoleCount < 1) {
+    throw ArgumentError.value(
+      originalHoleCount,
+      'originalHoleCount',
+      'Must be at least 1',
+    );
+  }
   final apiKey = dotenv.env['GEMINI_API_KEY']?.trim() ?? '';
   if (apiKey.isEmpty) {
     throw StateError('Set GEMINI_API_KEY in .env.local first.');
@@ -17,20 +27,22 @@ Future<int> readPunchCount(String imagePath) async {
   );
   final response = await http.post(
     uri,
-    headers: {
-      'Content-Type': 'application/json',
-      'x-goog-api-key': apiKey,
-    },
+    headers: {'Content-Type': 'application/json', 'x-goog-api-key': apiKey},
     body: jsonEncode({
       'contents': [
         {
           'parts': [
             {
               'text':
-                  'All of the holes on this punch card were originally white inside. '
-                  'How many of the holes on this card have either been hole-punched or colored in black? '
-                  'Make sure to look look carefully. Return just the number '
-                  'by itself and nothing else.',
+                  'This card originally had exactly $originalHoleCount outlined punch positions. '
+                  'Count how many of those positions have been physically hole-punched through the paper '
+                  'or deliberately filled in black. Uncompleted positions may contain printed text, '
+                  'numbers, day or month labels, or hyphens on a light background. '
+                  'Printed labels and circle outlines do not count as completed punches. '
+                  'Ignore decorative background artwork and the barcode. '
+                  'Account for all $originalHoleCount original positions, including any whose printed '
+                  'outline was removed by hole-punching. Return only one integer between 0 and '
+                  '$originalHoleCount inclusive, with no other text.',
             },
             {
               'inline_data': {
@@ -54,8 +66,10 @@ Future<int> readPunchCount(String imagePath) async {
   final parts = candidates?.firstOrNull?['content']?['parts'] as List<dynamic>?;
   final text = parts?.firstOrNull?['text'] as String?;
   final count = text == null ? null : int.tryParse(text.trim());
-  if (count == null || count < 0) {
-    throw const FormatException('Gemini did not return a valid number.');
+  if (count == null || count < 0 || count > originalHoleCount) {
+    throw FormatException(
+      'Gemini did not return a valid punch count between 0 and $originalHoleCount.',
+    );
   }
   return count;
 }
