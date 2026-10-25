@@ -9,7 +9,6 @@ sealed class GoalReward {
 
   factory GoalReward.fromJson(Object? value) {
     if (value is Map<String, dynamic>) {
-      if (value['type'] == 'etsy') return EtsyProductReward.fromJson(value);
       return FreeTextReward(value['text'] as String? ?? '');
     }
     return FreeTextReward(value as String? ?? '');
@@ -23,40 +22,6 @@ class FreeTextReward extends GoalReward {
   String get label => text;
   @override
   Map<String, Object?> toJson() => {'type': 'text', 'text': text};
-}
-
-class EtsyProductReward extends GoalReward {
-  const EtsyProductReward({
-    required this.listingId,
-    required this.title,
-    required this.url,
-    this.price = '',
-    this.imageUrl = '',
-  });
-  final String listingId;
-  final String title;
-  final String url;
-  final String price;
-  final String imageUrl;
-  @override
-  String get label => title;
-  @override
-  Map<String, Object?> toJson() => {
-    'type': 'etsy',
-    'listingId': listingId,
-    'title': title,
-    'url': url,
-    'price': price,
-    'imageUrl': imageUrl,
-  };
-  factory EtsyProductReward.fromJson(Map<String, dynamic> json) =>
-      EtsyProductReward(
-        listingId: json['listingId'] as String? ?? '',
-        title: json['title'] as String? ?? '',
-        url: json['url'] as String? ?? '',
-        price: json['price'] as String? ?? '',
-        imageUrl: json['imageUrl'] as String? ?? '',
-      );
 }
 
 class Goal {

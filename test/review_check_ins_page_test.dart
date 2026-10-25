@@ -59,11 +59,7 @@ Future<void> _openReview(
 void main() {
   for (final reward in [
     const FreeTextReward('A trip to the park'),
-    const EtsyProductReward(
-      listingId: '123',
-      title: 'A wooden puzzle',
-      url: 'https://www.etsy.com/listing/123',
-    ),
+    const FreeTextReward('A wooden puzzle'),
   ]) {
     testWidgets('shows ${reward.label} when the scan completes the goal', (
       tester,

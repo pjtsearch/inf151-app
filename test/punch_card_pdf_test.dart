@@ -61,30 +61,23 @@ void main() {
     },
   );
 
-  test(
-    'long titles, child names, and Etsy rewards keep both punch rows',
-    () async {
-      final goal =
-          _goal(
-            reward: const EtsyProductReward(
-              listingId: '1',
-              title:
-                  'Personalized handmade wooden rainbow puzzle with custom engraving',
-              url: 'https://example.com/reward',
-            ),
-          ).copyWith(
-            title:
-                'Put all of the toys away and tidy the bedroom before dinner',
-          );
-      final bytes = await buildPunchCardPdf(
-        goal,
-        childName: 'Alexandra Catherine Montgomery',
-      );
-      expect(_printedHoles(bytes), 14);
-      expect(_whiteHoleInteriors(bytes), 14);
-      expect(_pdfContents(bytes), contains('(Reward:)'));
-    },
-  );
+  test('long titles, child names, and rewards keep both punch rows', () async {
+    final goal =
+        _goal(
+          reward: const FreeTextReward(
+            'Personalized handmade wooden rainbow puzzle with custom engraving',
+          ),
+        ).copyWith(
+          title: 'Put all of the toys away and tidy the bedroom before dinner',
+        );
+    final bytes = await buildPunchCardPdf(
+      goal,
+      childName: 'Alexandra Catherine Montgomery',
+    );
+    expect(_printedHoles(bytes), 14);
+    expect(_whiteHoleInteriors(bytes), 14);
+    expect(_pdfContents(bytes), contains('(Reward:)'));
+  });
 
   test(
     'full, partial, and multiple pages print the exact number of punches',
