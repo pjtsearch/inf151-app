@@ -232,28 +232,12 @@ pw.Widget _buildPunchRow(Goal goal, int firstHole, int holeCount) {
         children: [
           for (var hole = 0; hole < holeCount; hole++)
             pw.Positioned(
-              left: hole * _holeSlotWidth,
-              top: 0,
-              child: pw.SizedBox(
-                width: _holeCellWidth,
-                height: 6 * PdfPageFormat.mm,
-                child: pw.Center(
-                  child: pw.Text(switch (punchCardLabelForHole(
-                    goal,
-                    firstHole + hole,
-                  )) {
-                    final label? => label,
-                    null => "-",
-                  }, style: const pw.TextStyle(fontSize: 8)),
-                ),
-              ),
-            ),
-          for (var hole = 0; hole < holeCount; hole++)
-            pw.Positioned(
               left:
                   hole * _holeSlotWidth + (_holeCellWidth - _holeDiameter) / 2,
               top: 5.5 * PdfPageFormat.mm,
-              child: _buildHole(),
+              child: _buildHole(
+                punchCardLabelForHole(goal, firstHole + hole) ?? '-',
+              ),
             ),
         ],
       ),
@@ -261,11 +245,17 @@ pw.Widget _buildPunchRow(Goal goal, int firstHole, int holeCount) {
   );
 }
 
-pw.Widget _buildHole() => pw.Container(
+pw.Widget _buildHole(String label) => pw.Container(
   width: _holeDiameter,
   height: _holeDiameter,
+  alignment: pw.Alignment.center,
+  padding: const pw.EdgeInsets.all(1.5),
   decoration: pw.BoxDecoration(
     shape: pw.BoxShape.circle,
     border: pw.Border.all(color: PdfColors.black, width: 0.8),
+  ),
+  child: pw.FittedBox(
+    fit: pw.BoxFit.scaleDown,
+    child: pw.Text(label, style: const pw.TextStyle(fontSize: 8)),
   ),
 );
