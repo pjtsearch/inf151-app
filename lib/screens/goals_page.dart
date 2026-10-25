@@ -227,7 +227,10 @@ class _GoalsPageState extends State<GoalsPage>
 
   Future<void> _scanCard() async {
     final updatedGoal = await Navigator.of(context).push<Goal>(
-      MaterialPageRoute(builder: (_) => ScanCardPage(goals: List.of(_goals))),
+      MaterialPageRoute(
+        builder: (_) =>
+            ScanCardPage(goals: List.of(_goals), children: List.of(_children)),
+      ),
     );
     if (updatedGoal == null || !mounted) return;
     final index = _goals.indexWhere((goal) => goal.id == updatedGoal.id);

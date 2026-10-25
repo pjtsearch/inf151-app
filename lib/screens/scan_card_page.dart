@@ -4,13 +4,17 @@ import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_zxing/flutter_zxing.dart';
 
+import '../models/child.dart';
 import '../models/goal.dart';
+import '../models/punch_card_progress.dart';
 import '../services/gemini_punch_reader.dart';
+import 'review_check_ins_page.dart';
 
 class ScanCardPage extends StatefulWidget {
-  const ScanCardPage({super.key, required this.goals});
+  const ScanCardPage({super.key, required this.goals, required this.children});
 
   final List<Goal> goals;
+  final List<Child> children;
 
   @override
   State<ScanCardPage> createState() => _ScanCardPageState();
@@ -94,7 +98,7 @@ class _ScanCardPageState extends State<ScanCardPage> {
         await _showError('Invalid task card. Scan an active task card.');
         return;
       }
-      if (card.start != goal.completedTasks) {
+      if (card.start > goal.completedTasks) {
         await _showError('Prior tasks not completed yet');
         return;
       }
@@ -105,17 +109,33 @@ class _ScanCardPageState extends State<ScanCardPage> {
         originalHoleCount: originalHoleCount,
       );
       if (!mounted) return;
-      if (count != originalHoleCount) {
-        await _showError(
-          'Task card not completed. Scan again once it\'s completed.',
-        );
-        return;
-      }
-      Navigator.of(context).pop(goal.copyWith(completedTasks: card.end + 1));
+      final progress = PunchCardProgress(
+        goal: goal,
+        cardStart: card.start,
+        cardEnd: card.end,
+        detectedCount: count,
+      );
+      final child = widget.children
+          .where((child) => child.id == goal.childId)
+          .firstOrNull;
+      final updatedGoal = await Navigator.of(context).push<Goal>(
+        MaterialPageRoute(
+          builder: (_) => ReviewCheckInsPage(progress: progress, child: child),
+        ),
+      );
+      if (!mounted) return;
+      if (updatedGoal != null) Navigator.of(context).pop(updatedGoal);
     } catch (error) {
       if (!mounted) return;
       print(error);
       await _showError('Could not scan this card. Please try again. ($error)');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _loading = false;
+          _frozenFramePath = null;
+        });
+      }
     }
   }
 
@@ -142,12 +162,6 @@ class _ScanCardPageState extends State<ScanCardPage> {
         ],
       ),
     );
-    if (mounted) {
-      setState(() {
-        _loading = false;
-        _frozenFramePath = null;
-      });
-    }
   }
 
   @override
