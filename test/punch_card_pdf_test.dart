@@ -5,6 +5,7 @@ import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:inf151_app/models/goal.dart';
 import 'package:inf151_app/services/punch_card_pdf.dart';
+import 'package:pdf/pdf.dart';
 
 Goal _goal({
   int tasks = 14,
@@ -51,6 +52,40 @@ int _whiteHoleInteriors(Uint8List bytes) {
 }
 
 void main() {
+  for (final (format, expectedPages) in [
+    (PdfPageFormat.letter, 2),
+    (PdfPageFormat.a4, 2),
+    (PdfPageFormat.legal, 1),
+    (PdfPageFormat.a5, 3),
+    (PdfPageFormat.a4.landscape, 1),
+  ]) {
+    test('paper ${format.width} × ${format.height} fits all cards', () async {
+      final bytes = await buildPunchCardPdf(
+        _goal(tasks: 113),
+        childName: 'Alex',
+        pageFormat: format,
+      );
+      final pdf = latin1.decode(bytes);
+      final pageSizes = RegExp(
+        r'/MediaBox\s*\[\s*0\s+0\s+([\d.]+)\s+([\d.]+)\s*\]',
+      ).allMatches(pdf).toList();
+      expect(pageSizes, hasLength(expectedPages));
+      for (final page in pageSizes) {
+        expect(double.parse(page[1]!), closeTo(format.width, 0.01));
+        expect(double.parse(page[2]!), closeTo(format.height, 0.01));
+      }
+      expect(_printedHoles(bytes), 113);
+      expect(_whiteHoleInteriors(bytes), 113);
+    });
+  }
+
+  test('paper smaller than a card is rejected', () async {
+    await expectLater(
+      buildPunchCardPdf(_goal(), pageFormat: const PdfPageFormat(100, 100)),
+      throwsArgumentError,
+    );
+  });
+
   test(
     'a reward and child name leave room for all fourteen printed holes',
     () async {

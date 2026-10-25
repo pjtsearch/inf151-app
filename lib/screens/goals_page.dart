@@ -1,17 +1,16 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:printing/printing.dart';
 
 import '../models/child.dart';
 import '../models/goal.dart';
 import '../models/goal_sort.dart';
 import 'child_form_page.dart';
 import 'manage_children_page.dart';
+import 'print_preview_page.dart';
 import 'scan_card_page.dart';
 import '../services/child_storage.dart';
 import '../services/goal_storage.dart';
-import '../services/punch_card_pdf.dart';
 import '../utils/goal_date_utils.dart';
 import '../widgets/empty_goals.dart';
 import '../widgets/children_chips.dart';
@@ -217,11 +216,10 @@ class _GoalsPageState extends State<GoalsPage>
     final child = _children
         .where((child) => child.id == goal.childId)
         .firstOrNull;
-    final pdf = await buildPunchCardPdf(goal, childName: child?.name);
-    await Printing.layoutPdf(
-      onLayout: (_) => pdf,
-      name:
-          '${goal.title.replaceAll(RegExp(r'[^a-zA-Z0-9-_]'), '_')}_punch_card.pdf',
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        builder: (_) => PrintPreviewPage(goal: goal, childName: child?.name),
+      ),
     );
   }
 

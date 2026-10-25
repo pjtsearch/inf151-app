@@ -13,7 +13,9 @@ const punchCardMaxRows = 2;
 const _cardWidth = 85.6 * PdfPageFormat.mm;
 const _cardHeight = 53.98 * PdfPageFormat.mm;
 const _holeDiameter = 6.35 * PdfPageFormat.mm;
-const _cardsPerPage = 8;
+const _pageMargin = 10 * PdfPageFormat.mm;
+const _cardSpacing = 8 * PdfPageFormat.mm;
+const _cardRunSpacing = 6 * PdfPageFormat.mm;
 const _holeCellWidth = 9 * PdfPageFormat.mm;
 const _holeCellGap = 2 * PdfPageFormat.mm;
 const _holeSlotWidth = _holeCellWidth + _holeCellGap;
@@ -64,23 +66,41 @@ String _monthLabel(DateTime startDate, int offset) {
 
 int punchCountFor(Goal goal) => goal.totalTasks;
 
-Future<Uint8List> buildPunchCardPdf(Goal goal, {String? childName}) async {
+Future<Uint8List> buildPunchCardPdf(
+  Goal goal, {
+  String? childName,
+  PdfPageFormat pageFormat = PdfPageFormat.letter,
+}) async {
   final totalHoles = punchCountFor(goal);
   if (totalHoles == 0) return pw.Document().save();
 
+  final availableWidth = pageFormat.width - 2 * _pageMargin;
+  final availableHeight = pageFormat.height - 2 * _pageMargin;
+  if (!availableWidth.isFinite ||
+      !availableHeight.isFinite ||
+      availableWidth < _cardWidth ||
+      availableHeight < _cardHeight) {
+    throw ArgumentError.value(pageFormat, 'pageFormat', 'Paper is too small');
+  }
+  final columns =
+      ((availableWidth + _cardSpacing) / (_cardWidth + _cardSpacing)).floor();
+  final rows =
+      ((availableHeight + _cardRunSpacing) / (_cardHeight + _cardRunSpacing))
+          .floor();
+  final cardsPerPage = columns * rows;
   final holesPerCard = punchCardColumnsPerRow * punchCardMaxRows;
   final cardCount = (totalHoles / holesPerCard).ceil();
   final document = pw.Document();
 
-  for (var pageStart = 0; pageStart < cardCount; pageStart += _cardsPerPage) {
-    final cardsOnPage = math.min(_cardsPerPage, cardCount - pageStart);
+  for (var pageStart = 0; pageStart < cardCount; pageStart += cardsPerPage) {
+    final cardsOnPage = math.min(cardsPerPage, cardCount - pageStart);
     document.addPage(
       pw.Page(
-        pageFormat: PdfPageFormat.letter,
-        margin: const pw.EdgeInsets.all(10 * PdfPageFormat.mm),
+        pageFormat: pageFormat,
+        margin: const pw.EdgeInsets.all(_pageMargin),
         build: (_) => pw.Wrap(
-          spacing: 8 * PdfPageFormat.mm,
-          runSpacing: 6 * PdfPageFormat.mm,
+          spacing: _cardSpacing,
+          runSpacing: _cardRunSpacing,
           children: [
             for (
               var cardIndex = pageStart;
