@@ -20,13 +20,13 @@ class ChildProfileCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final placeholder = ColoredBox(
-      color: colors.primaryContainer.withValues(alpha: 0.5),
+      color: child.color.background,
       child: Center(
         child: Text(
           child.name.characters.firstOrNull?.toUpperCase() ?? '?',
           style: Theme.of(
             context,
-          ).textTheme.displaySmall?.copyWith(color: colors.onPrimaryContainer),
+          ).textTheme.displaySmall?.copyWith(color: child.color.foreground),
         ),
       ),
     );

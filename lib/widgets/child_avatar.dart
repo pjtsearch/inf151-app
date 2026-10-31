@@ -17,6 +17,8 @@ class ChildAvatar extends StatelessWidget {
     );
     return CircleAvatar(
       radius: radius,
+      backgroundColor: child.color.background,
+      foregroundColor: child.color.foreground,
       child: photo == null
           ? placeholder
           : ClipOval(

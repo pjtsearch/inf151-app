@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../models/child.dart';
+import '../models/child_color.dart';
 import '../widgets/child_avatar.dart';
 
 class ChildFormPage extends StatefulWidget {
@@ -20,6 +21,7 @@ class _ChildFormPageState extends State<ChildFormPage> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _nameController;
   Uint8List? _photoBytes;
+  late ChildColor _color;
   bool _pickingPhoto = false;
   bool _saving = false;
 
@@ -28,6 +30,7 @@ class _ChildFormPageState extends State<ChildFormPage> {
     super.initState();
     _nameController = TextEditingController(text: widget.child?.name ?? '');
     _photoBytes = widget.child?.photoBytes;
+    _color = widget.child?.color ?? ChildColor.blue;
   }
 
   @override
@@ -76,6 +79,7 @@ class _ChildFormPageState extends State<ChildFormPage> {
       id: widget.child?.id ?? DateTime.now().microsecondsSinceEpoch.toString(),
       name: _nameController.text.trim(),
       photoBytes: _photoBytes,
+      color: _color,
     );
     try {
       await widget.onSave(child);
@@ -114,6 +118,7 @@ class _ChildFormPageState extends State<ChildFormPage> {
                         id: 'preview',
                         name: _nameController.text.trim(),
                         photoBytes: _photoBytes,
+                        color: _color,
                       ),
                       radius: 48,
                     ),
@@ -158,6 +163,50 @@ class _ChildFormPageState extends State<ChildFormPage> {
                     onFieldSubmitted: (_) {
                       if (!_saving && !_pickingPhoto) _save();
                     },
+                  ),
+                  const SizedBox(height: 24),
+                  Row(
+                    children: [
+                      for (final color in ChildColor.values)
+                        Expanded(
+                          child: Semantics(
+                            label: color.label,
+                            button: true,
+                            selected: _color == color,
+                            enabled: !_saving,
+                            child: Tooltip(
+                              message: color.label,
+                              excludeFromSemantics: true,
+                              child: InkResponse(
+                                onTap: _saving
+                                    ? null
+                                    : () => setState(() => _color = color),
+                                radius: 24,
+                                child: SizedBox(
+                                  height: 48,
+                                  child: Center(
+                                    child: Container(
+                                      width: 32,
+                                      height: 32,
+                                      decoration: BoxDecoration(
+                                        color: color.background,
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: _color == color
+                                          ? Icon(
+                                              Icons.check,
+                                              size: 20,
+                                              color: color.foreground,
+                                            )
+                                          : null,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
                   const SizedBox(height: 24),
                   FilledButton(

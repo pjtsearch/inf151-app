@@ -60,14 +60,12 @@ class ChildrenChips extends StatelessWidget {
                 child: Text(child.name, overflow: TextOverflow.ellipsis),
               ),
               selected: selectedChildId == child.id,
-              selectedColor: colors.primaryContainer,
-              labelStyle: TextStyle(
-                color: selectedChildId == child.id
-                    ? colors.onPrimaryContainer
-                    : colors.onSurfaceVariant,
-              ),
-              side: selectedChildId == child.id ? BorderSide.none : null,
-              showCheckmark: false,
+              backgroundColor: child.color.background,
+              selectedColor: child.color.background,
+              labelStyle: TextStyle(color: child.color.foreground),
+              side: BorderSide.none,
+              checkmarkColor: child.color.foreground,
+              showCheckmark: true,
               onSelected: (_) => onSelected(child.id),
             ),
             const SizedBox(width: 8),

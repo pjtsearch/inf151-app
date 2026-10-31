@@ -56,7 +56,7 @@ class GoalCard extends StatelessWidget {
                           4,
                         ),
                         decoration: BoxDecoration(
-                          color: tint,
+                          color: child!.color.background,
                           borderRadius: BorderRadius.circular(16),
                         ),
                         child: Row(
@@ -70,7 +70,7 @@ class GoalCard extends StatelessWidget {
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: theme.textTheme.labelMedium?.copyWith(
-                                  color: colors.onPrimaryContainer,
+                                  color: child!.color.foreground,
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
