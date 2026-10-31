@@ -6,6 +6,7 @@ import 'package:onboarding_overlay/onboarding_overlay.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/child.dart';
+import '../models/child_color.dart';
 import '../models/goal.dart';
 import '../models/goal_sort.dart';
 import 'child_form_page.dart';
@@ -17,6 +18,7 @@ import '../services/child_storage.dart';
 import '../services/goal_storage.dart';
 import '../services/punch_card_pdf.dart';
 import '../services/goal_reminder_service.dart';
+import '../services/example_goals.dart';
 import '../utils/goal_date_utils.dart';
 import '../widgets/empty_goals.dart';
 import '../widgets/children_chips.dart';
@@ -47,6 +49,7 @@ class _GoalsPageState extends State<GoalsPage>
   final _scrollController = ScrollController();
   bool _onboardingVisible = false;
   bool _startingOnboarding = false;
+  bool _resettingExamples = false;
   final List<Child> _children = [];
   final List<Goal> _goals = [];
   final Set<String> _selectedGoalIds = {};
@@ -149,6 +152,59 @@ class _GoalsPageState extends State<GoalsPage>
     } finally {
       _startingOnboarding = false;
     }
+  }
+
+  Future<void> _restartOnboardingWithExamples() async {
+    if (!kDebugMode ||
+        _loading ||
+        _resettingExamples ||
+        _startingOnboarding ||
+        _onboardingVisible) {
+      return;
+    }
+    setState(() => _resettingExamples = true);
+    try {
+      const children = [
+        Child(id: 'example-alex', name: 'Alex', color: ChildColor.blue),
+        Child(id: 'example-sam', name: 'Sam', color: ChildColor.purple),
+      ];
+      final examples = buildExampleGoals(children, DateTime.now());
+      final previousChildren = List<Child>.of(_children);
+      await _childStorage.save(children);
+      try {
+        await _storage.save(examples);
+      } catch (_) {
+        await _childStorage.save(previousChildren);
+        rethrow;
+      }
+      if (!mounted) return;
+      _statusController.animateTo(0);
+      setState(() {
+        _children
+          ..clear()
+          ..addAll(children);
+        _goals
+          ..clear()
+          ..addAll(examples);
+        _selectedGoalIds.clear();
+        _selectedChildId = null;
+        _showPast = false;
+      });
+      await _syncReminders();
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Could not reset example children and goals. Please try again.',
+          ),
+        ),
+      );
+      return;
+    } finally {
+      if (mounted) setState(() => _resettingExamples = false);
+    }
+    if (mounted) await _showOnboarding();
   }
 
   void _finishOnboarding() {
@@ -515,10 +571,14 @@ class _GoalsPageState extends State<GoalsPage>
                       ] else ...[
                         if (kDebugMode)
                           IconButton(
-                            tooltip: 'Show onboarding guide (debug)',
-                            onPressed: _loading || _startingOnboarding
+                            tooltip:
+                                'Reset children and goals for onboarding (debug)',
+                            onPressed:
+                                _loading ||
+                                    _startingOnboarding ||
+                                    _resettingExamples
                                 ? null
-                                : _showOnboarding,
+                                : _restartOnboardingWithExamples,
                             icon: const Icon(Icons.help_outline),
                           ),
                         IconButton(
