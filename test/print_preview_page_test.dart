@@ -82,7 +82,7 @@ Goal _goal() => Goal(
 );
 
 Future<void> _openPreview(WidgetTester tester) async {
-  SharedPreferences.setMockInitialValues({});
+  SharedPreferences.setMockInitialValues({'onboarding_seen': true});
   await ChildStorage().save([const Child(id: 'emma', name: 'Emma')]);
   await GoalStorage().save([_goal()]);
   await tester.pumpWidget(const GoalApp());
@@ -96,7 +96,7 @@ Future<void> _showSelectableGoals(WidgetTester tester) async {
   tester.view.physicalSize = const Size(430, 1200);
   addTearDown(tester.view.resetDevicePixelRatio);
   addTearDown(tester.view.resetPhysicalSize);
-  SharedPreferences.setMockInitialValues({});
+  SharedPreferences.setMockInitialValues({'onboarding_seen': true});
   await ChildStorage().save([
     const Child(id: 'emma', name: 'Emma'),
     const Child(id: 'alex', name: 'Alex'),

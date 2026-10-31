@@ -40,7 +40,7 @@ Future<void> _seed({
   List<Child> children = const [_alex, _sam],
   List<Goal> goals = const [],
 }) async {
-  SharedPreferences.setMockInitialValues({});
+  SharedPreferences.setMockInitialValues({'onboarding_seen': true});
   await ChildStorage().save(children);
   await GoalStorage().save(goals);
 }

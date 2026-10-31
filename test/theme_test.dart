@@ -29,7 +29,7 @@ Goal _goal() => Goal(
 Future<void> _showApp(WidgetTester tester, Brightness brightness) async {
   tester.platformDispatcher.platformBrightnessTestValue = brightness;
   addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
-  SharedPreferences.setMockInitialValues({});
+  SharedPreferences.setMockInitialValues({'onboarding_seen': true});
   await ChildStorage().save([_emma]);
   await GoalStorage().save([_goal()]);
   await tester.pumpWidget(const GoalApp());

@@ -55,7 +55,7 @@ void main() {
   testWidgets(
     'a new child can choose from eight colors and keeps it after restart',
     (tester) async {
-      SharedPreferences.setMockInitialValues({});
+      SharedPreferences.setMockInitialValues({'onboarding_seen': true});
       await _showApp(tester);
       await tester.tap(find.text('Add child'));
       await tester.pumpAndSettle();
@@ -87,7 +87,7 @@ void main() {
   testWidgets('editing color updates filters, goal badges, and goal forms', (
     tester,
   ) async {
-    SharedPreferences.setMockInitialValues({});
+    SharedPreferences.setMockInitialValues({'onboarding_seen': true});
     await ChildStorage().save([
       const Child(id: 'alex', name: 'Alex', color: ChildColor.green),
     ]);

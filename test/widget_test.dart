@@ -172,7 +172,7 @@ void main() {
   });
 
   testWidgets('a new goal can be added and remains stored', (tester) async {
-    SharedPreferences.setMockInitialValues({});
+    SharedPreferences.setMockInitialValues({'onboarding_seen': true});
     await tester.pumpWidget(const GoalApp());
     await tester.pumpAndSettle();
 
@@ -225,7 +225,7 @@ void main() {
   testWidgets('past goals show the development task count and can be copied', (
     tester,
   ) async {
-    SharedPreferences.setMockInitialValues({});
+    SharedPreferences.setMockInitialValues({'onboarding_seen': true});
     await ChildStorage().save([const Child(id: 'alex', name: 'Alex')]);
     final goal = Goal(
       id: 'goal-3',
