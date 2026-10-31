@@ -52,6 +52,63 @@ int _whiteHoleInteriors(Uint8List bytes) {
 }
 
 void main() {
+  test(
+    'different goals share a sheet and retain their child names and punches',
+    () async {
+      final bytes = await buildPunchCardsPdf([
+        PunchCardPrintJob(
+          goal: _goal().copyWith(id: 'read', title: 'Read'),
+          childName: 'Alex',
+        ),
+        PunchCardPrintJob(
+          goal: _goal(tasks: 7).copyWith(id: 'tidy', title: 'Tidy'),
+          childName: 'Sam',
+        ),
+      ]);
+      expect(
+        RegExp(r'/MediaBox\b').allMatches(latin1.decode(bytes)),
+        hasLength(1),
+      );
+      expect(_printedHoles(bytes), 21);
+      expect(_whiteHoleInteriors(bytes), 21);
+      final contents = _pdfContents(bytes);
+      for (final label in ['Read', 'Tidy', 'Alex', 'Sam']) {
+        expect(contents, contains('($label)'));
+      }
+    },
+  );
+
+  for (final (goalCount, pages) in [(8, 1), (9, 2)]) {
+    test('$goalCount selected goals use $pages Letter sheets', () async {
+      final bytes = await buildPunchCardsPdf([
+        for (var index = 0; index < goalCount; index++)
+          PunchCardPrintJob(goal: _goal().copyWith(id: 'goal-$index')),
+      ]);
+      expect(
+        RegExp(r'/MediaBox\b').allMatches(latin1.decode(bytes)),
+        hasLength(pages),
+      );
+      expect(_printedHoles(bytes), goalCount * 14);
+    });
+  }
+
+  test(
+    'goals spanning several cards share pages without losing partial cards',
+    () async {
+      final bytes = await buildPunchCardsPdf([
+        PunchCardPrintJob(goal: _goal(tasks: 29)),
+        PunchCardPrintJob(goal: _goal(tasks: 15).copyWith(id: 'second')),
+      ]);
+      // Three cards for the first goal and two for the second fit on one sheet.
+      expect(
+        RegExp(r'/MediaBox\b').allMatches(latin1.decode(bytes)),
+        hasLength(1),
+      );
+      expect(_printedHoles(bytes), 44);
+      expect(_whiteHoleInteriors(bytes), 44);
+    },
+  );
+
   for (final (format, expectedPages) in [
     (PdfPageFormat.letter, 2),
     (PdfPageFormat.a4, 2),

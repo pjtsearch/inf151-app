@@ -66,13 +66,37 @@ String _monthLabel(DateTime startDate, int offset) {
 
 int punchCountFor(Goal goal) => goal.totalTasks;
 
+class PunchCardPrintJob {
+  const PunchCardPrintJob({required this.goal, this.childName});
+
+  final Goal goal;
+  final String? childName;
+}
+
 Future<Uint8List> buildPunchCardPdf(
   Goal goal, {
   String? childName,
   PdfPageFormat pageFormat = PdfPageFormat.letter,
+}) => buildPunchCardsPdf([
+  PunchCardPrintJob(goal: goal, childName: childName),
+], pageFormat: pageFormat);
+
+Future<Uint8List> buildPunchCardsPdf(
+  List<PunchCardPrintJob> jobs, {
+  PdfPageFormat pageFormat = PdfPageFormat.letter,
 }) async {
-  final totalHoles = punchCountFor(goal);
-  if (totalHoles == 0) return pw.Document().save();
+  final cards = <pw.Widget>[];
+  const holesPerCard = punchCardColumnsPerRow * punchCardMaxRows;
+  for (final job in jobs) {
+    final totalHoles = punchCountFor(job.goal);
+    final cardCount = (totalHoles / holesPerCard).ceil();
+    for (var cardIndex = 0; cardIndex < cardCount; cardIndex++) {
+      cards.add(
+        _buildCard(job.goal, totalHoles, cardIndex, cardCount, job.childName),
+      );
+    }
+  }
+  if (cards.isEmpty) return pw.Document().save();
 
   final availableWidth = pageFormat.width - 2 * _pageMargin;
   final availableHeight = pageFormat.height - 2 * _pageMargin;
@@ -88,12 +112,9 @@ Future<Uint8List> buildPunchCardPdf(
       ((availableHeight + _cardRunSpacing) / (_cardHeight + _cardRunSpacing))
           .floor();
   final cardsPerPage = columns * rows;
-  final holesPerCard = punchCardColumnsPerRow * punchCardMaxRows;
-  final cardCount = (totalHoles / holesPerCard).ceil();
   final document = pw.Document();
 
-  for (var pageStart = 0; pageStart < cardCount; pageStart += cardsPerPage) {
-    final cardsOnPage = math.min(cardsPerPage, cardCount - pageStart);
+  for (var pageStart = 0; pageStart < cards.length; pageStart += cardsPerPage) {
     document.addPage(
       pw.Page(
         pageFormat: pageFormat,
@@ -101,14 +122,7 @@ Future<Uint8List> buildPunchCardPdf(
         build: (_) => pw.Wrap(
           spacing: _cardSpacing,
           runSpacing: _cardRunSpacing,
-          children: [
-            for (
-              var cardIndex = pageStart;
-              cardIndex < pageStart + cardsOnPage;
-              cardIndex++
-            )
-              _buildCard(goal, totalHoles, cardIndex, cardCount, childName),
-          ],
+          children: cards.skip(pageStart).take(cardsPerPage).toList(),
         ),
       ),
     );

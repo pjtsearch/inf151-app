@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:pdf/pdf.dart';
 import 'package:printing/printing.dart';
 
-import '../models/goal.dart';
 import '../services/punch_card_pdf.dart';
 
 enum _PaperSize {
@@ -20,10 +19,10 @@ enum _PaperSize {
 }
 
 class PrintPreviewPage extends StatefulWidget {
-  const PrintPreviewPage({super.key, required this.goal, this.childName});
+  const PrintPreviewPage({super.key, required this.jobs})
+    : assert(jobs.length > 0);
 
-  final Goal goal;
-  final String? childName;
+  final List<PunchCardPrintJob> jobs;
 
   @override
   State<PrintPreviewPage> createState() => _PrintPreviewPageState();
@@ -40,11 +39,8 @@ class _PrintPreviewPageState extends State<PrintPreviewPage> {
     _document = _buildDocument();
   }
 
-  Future<Uint8List> _buildDocument() => buildPunchCardPdf(
-    widget.goal,
-    childName: widget.childName,
-    pageFormat: _paperSize.format,
-  );
+  Future<Uint8List> _buildDocument() =>
+      buildPunchCardsPdf(widget.jobs, pageFormat: _paperSize.format);
 
   Future<void> _print(Uint8List bytes) async {
     if (_printing) return;
@@ -54,8 +50,9 @@ class _PrintPreviewPageState extends State<PrintPreviewPage> {
         onLayout: (_) => bytes,
         format: _paperSize.format,
         dynamicLayout: false,
-        name:
-            '${widget.goal.title.replaceAll(RegExp(r'[^a-zA-Z0-9-_]'), '_')}_punch_card.pdf',
+        name: widget.jobs.length == 1
+            ? '${widget.jobs.single.goal.title.replaceAll(RegExp(r'[^a-zA-Z0-9-_]'), '_')}_punch_card.pdf'
+            : 'goal_punch_cards.pdf',
       );
     } catch (_) {
       if (!mounted) return;
