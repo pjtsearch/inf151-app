@@ -121,6 +121,13 @@ class GoalCard extends StatelessWidget {
                 fontWeight: FontWeight.w700,
               ),
             ),
+            const SizedBox(height: 4),
+            Text(
+              goal.frequencyDescription,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: colors.onSurfaceVariant,
+              ),
+            ),
             if (goal.reward.label.isNotEmpty) ...[
               const SizedBox(height: 12),
               Container(
