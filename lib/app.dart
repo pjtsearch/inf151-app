@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 
 import 'screens/goals_page.dart';
+import 'services/goal_reminder_service.dart';
 
 class GoalApp extends StatelessWidget {
-  const GoalApp({super.key});
+  const GoalApp({super.key, this.reminderService});
+
+  final GoalReminderService? reminderService;
 
   @override
   Widget build(BuildContext context) {
@@ -13,7 +16,7 @@ class GoalApp extends StatelessWidget {
       theme: _buildTheme(Brightness.light),
       darkTheme: _buildTheme(Brightness.dark),
       themeMode: ThemeMode.system,
-      home: const GoalsPage(),
+      home: GoalsPage(reminderService: reminderService),
     );
   }
 }

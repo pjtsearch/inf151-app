@@ -39,7 +39,6 @@ class GoalStorage {
     try {
       return (jsonDecode(data) as List<dynamic>)
           .map((item) => Goal.fromJson(item as Map<String, dynamic>))
-          .map((item) => item.copyWith(completedTasks: 0)) // TODO: Remove
           .toList();
     } on FormatException {
       return [];
@@ -50,9 +49,10 @@ class GoalStorage {
 
   Future<void> save(List<Goal> goals) async {
     final preferences = await SharedPreferences.getInstance();
-    await preferences.setString(
+    final saved = await preferences.setString(
       _key,
       jsonEncode(goals.map((goal) => goal.toJson()).toList()),
     );
+    if (!saved) throw StateError('Could not save goals.');
   }
 }

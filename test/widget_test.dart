@@ -129,31 +129,25 @@ void main() {
     expect(goal.isPastOn(DateTime(2025, 3, 1)), isTrue);
   });
 
-  test(
-    'goals survive a storage reload with the development progress reset',
-    () async {
-      SharedPreferences.setMockInitialValues({});
-      final goal = Goal(
-        id: 'goal-1',
-        childId: 'alex',
-        title: 'Mow the lawn',
-        frequency: 1,
-        frequencyUnit: FrequencyUnit.week,
-        duration: 6,
-        durationUnit: DurationUnit.month,
-        startDate: DateTime(2025, 1, 1),
-        completedTasks: 24,
-      );
-      final storage = GoalStorage();
+  test('goals and recorded progress survive a storage reload', () async {
+    SharedPreferences.setMockInitialValues({});
+    final goal = Goal(
+      id: 'goal-1',
+      childId: 'alex',
+      title: 'Mow the lawn',
+      frequency: 1,
+      frequencyUnit: FrequencyUnit.week,
+      duration: 6,
+      durationUnit: DurationUnit.month,
+      startDate: DateTime(2025, 1, 1),
+      completedTasks: 24,
+    );
+    final storage = GoalStorage();
 
-      await storage.save([goal]);
+    await storage.save([goal]);
 
-      expect(
-        (await storage.load()).single.toJson(),
-        goal.copyWith(completedTasks: 0).toJson(),
-      );
-    },
-  );
+    expect((await storage.load()).single.toJson(), goal.toJson());
+  });
 
   test('a completed goal is past before its end date', () {
     final goal = Goal(
@@ -222,7 +216,7 @@ void main() {
     expect(find.text('Print punch card'), findsNothing);
   });
 
-  testWidgets('past goals show the development task count and can be copied', (
+  testWidgets('past goals show recorded progress and can be copied', (
     tester,
   ) async {
     SharedPreferences.setMockInitialValues({'onboarding_seen': true});
@@ -248,7 +242,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Read a book'), findsOneWidget);
-    expect(find.text('0 / 32 completed'), findsOneWidget);
+    expect(find.text('32 / 32 completed'), findsOneWidget);
 
     await tester.tap(find.byTooltip('Goal options'));
     await tester.pumpAndSettle();

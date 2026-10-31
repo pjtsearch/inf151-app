@@ -12,9 +12,11 @@ import 'child_form_page.dart';
 import 'manage_children_page.dart';
 import 'print_preview_page.dart';
 import 'scan_card_page.dart';
+import 'settings_page.dart';
 import '../services/child_storage.dart';
 import '../services/goal_storage.dart';
 import '../services/punch_card_pdf.dart';
+import '../services/goal_reminder_service.dart';
 import '../utils/goal_date_utils.dart';
 import '../widgets/empty_goals.dart';
 import '../widgets/children_chips.dart';
@@ -23,16 +25,19 @@ import '../widgets/goal_form_sheet.dart';
 import '../widgets/goal_onboarding.dart';
 
 class GoalsPage extends StatefulWidget {
-  const GoalsPage({super.key});
+  const GoalsPage({super.key, this.reminderService});
+
+  final GoalReminderService? reminderService;
 
   @override
   State<GoalsPage> createState() => _GoalsPageState();
 }
 
 class _GoalsPageState extends State<GoalsPage>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   final _storage = GoalStorage();
   final _childStorage = ChildStorage();
+  late final _reminders = widget.reminderService ?? GoalReminderService();
   static const _onboardingSeenKey = 'onboarding_seen';
   final _onboardingKey = GlobalKey<OnboardingState>();
   final _childrenFocus = FocusNode(debugLabel: 'Onboarding children');
@@ -58,6 +63,7 @@ class _GoalsPageState extends State<GoalsPage>
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _statusController = TabController(length: 2, vsync: this);
     _loadGoals();
     _refreshTimer = Timer.periodic(
@@ -68,6 +74,7 @@ class _GoalsPageState extends State<GoalsPage>
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _onboardingKey.currentState?.hide();
     _childrenFocus.dispose();
     _addGoalFocus.dispose();
@@ -97,6 +104,29 @@ class _GoalsPageState extends State<GoalsPage>
       _loading = false;
     });
     if (!onboardingSeen) unawaited(_showOnboarding());
+    unawaited(_syncReminders());
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && !_loading) {
+      unawaited(_syncReminders());
+    }
+  }
+
+  Future<void> _syncReminders() async {
+    try {
+      await _reminders.sync(_goals, _children);
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Could not update reminders. Open the app again to retry.',
+          ),
+        ),
+      );
+    }
   }
 
   Future<void> _showOnboarding() async {
@@ -176,6 +206,7 @@ class _GoalsPageState extends State<GoalsPage>
         ..clear()
         ..addAll(children);
     });
+    await _syncReminders();
   }
 
   Future<Child?> _createChild() => Navigator.of(context).push<Child>(
@@ -203,6 +234,7 @@ class _GoalsPageState extends State<GoalsPage>
   Future<void> _saveGoals() async {
     await _storage.save(_goals);
     if (mounted) setState(() {});
+    await _syncReminders();
   }
 
   Future<void> _editGoal({Goal? goal, bool isCopy = false}) async {
@@ -242,6 +274,15 @@ class _GoalsPageState extends State<GoalsPage>
     );
     await _editGoal(goal: copy, isCopy: true);
   }
+
+  Future<void> _openSettings() => Navigator.of(context).push<void>(
+    MaterialPageRoute(
+      builder: (_) => SettingsPage(
+        reminderService: _reminders,
+        onRemindersChanged: _syncReminders,
+      ),
+    ),
+  );
 
   Future<bool> _confirmDeleteGoal(Goal goal) async {
     final confirmed = await showDialog<bool>(
@@ -325,6 +366,7 @@ class _GoalsPageState extends State<GoalsPage>
           ..addAll(remaining);
         _selectedGoalIds.removeAll(selectedIds);
       });
+      await _syncReminders();
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -516,6 +558,11 @@ class _GoalsPageState extends State<GoalsPage>
                               ),
                             ),
                           ],
+                        ),
+                        IconButton(
+                          tooltip: 'Settings',
+                          onPressed: _loading ? null : _openSettings,
+                          icon: const Icon(Icons.settings_outlined),
                         ),
                       ],
                     ],
