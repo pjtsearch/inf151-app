@@ -38,7 +38,7 @@ Future<int> readPunchCount(
                   'They had a white background. '
                   'Count how many of those positions have been physically hole-punched through the paper '
                   'or deliberately filled in black or gray (eg. with a pencil). '
-                  'The punched-out holes will no longer be white but some different color. '
+                  'The punched-out holes will no longer be white but some different color; if you suspect a hole to be filled, it probably is; don\'t err on the side of caution. '
                   'Uncompleted positions will contain printed text, '
                   'numbers, day or month labels, or hyphens on a light background. '
                   'Ignore skipped holes; the holes should be punched out from left to right, top to bottom order. '
