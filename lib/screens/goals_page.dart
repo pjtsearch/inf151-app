@@ -161,8 +161,7 @@ class _GoalsPageState extends State<GoalsPage>
   }
 
   Future<void> _restartOnboardingWithExamples() async {
-    if (!kDebugMode ||
-        _loading ||
+    if (_loading ||
         _resettingExamples ||
         _startingOnboarding ||
         _onboardingVisible) {
@@ -617,7 +616,6 @@ class _GoalsPageState extends State<GoalsPage>
                           icon: const Icon(Icons.delete_outline),
                         ),
                       ] else ...[
-                        if (kDebugMode)
                           IconButton(
                             tooltip: 'Reset children and goals for onboarding (debug)',
                             onPressed:

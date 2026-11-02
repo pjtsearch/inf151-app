@@ -4,7 +4,7 @@ import '../models/goal.dart';
 List<Goal> buildExampleGoals(List<Child> children, DateTime now) {
   assert(children.isNotEmpty);
   final start = DateTime(now.year, now.month, now.day);
-  final id = now.microsecondsSinceEpoch;
+  final id = 1793654237600491;
   return [
     Goal(
       id: 'example-reading-$id',
