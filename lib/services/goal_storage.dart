@@ -26,9 +26,10 @@ class GoalStorage {
 
   Future<void> save(List<Goal> goals) async {
     final preferences = await SharedPreferences.getInstance();
-    await preferences.setString(
+    final saved = await preferences.setString(
       _key,
       jsonEncode(goals.map((goal) => goal.toJson()).toList()),
     );
+    if (!saved) throw StateError('Could not save goals.');
   }
 }

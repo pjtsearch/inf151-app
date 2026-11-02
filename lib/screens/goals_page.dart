@@ -1,6 +1,8 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:audioplayers/audioplayers.dart';
+import 'package:flutter_confetti/flutter_confetti.dart';
 import 'package:printing/printing.dart';
 
 import '../models/goal.dart';
@@ -21,6 +23,8 @@ class GoalsPage extends StatefulWidget {
 
 class _GoalsPageState extends State<GoalsPage> {
   final _storage = GoalStorage();
+  AudioPlayer? _celebrationPlayer;
+  bool _scanning = false;
   final List<Goal> _goals = [];
   bool _showPast = false;
   bool _loading = true;
@@ -39,6 +43,8 @@ class _GoalsPageState extends State<GoalsPage> {
   @override
   void dispose() {
     _refreshTimer?.cancel();
+    final player = _celebrationPlayer;
+    if (player != null) unawaited(player.dispose());
     super.dispose();
   }
 
@@ -121,14 +127,53 @@ class _GoalsPageState extends State<GoalsPage> {
   }
 
   Future<void> _scanCard() async {
-    final updatedGoal = await Navigator.of(context).push<Goal>(
-      MaterialPageRoute(builder: (_) => ScanCardPage(goals: List.of(_goals))),
-    );
-    if (updatedGoal == null || !mounted) return;
-    final index = _goals.indexWhere((goal) => goal.id == updatedGoal.id);
-    if (index < 0) return;
-    setState(() => _goals[index] = updatedGoal);
-    await _saveGoals();
+    if (_scanning) return;
+    _scanning = true;
+    try {
+      final updatedGoal = await Navigator.of(context).push<Goal>(
+        MaterialPageRoute(builder: (_) => ScanCardPage(goals: List.of(_goals))),
+      );
+      if (updatedGoal == null || !mounted) return;
+      final index = _goals.indexWhere((goal) => goal.id == updatedGoal.id);
+      if (index < 0) return;
+      final previousGoal = _goals[index];
+      final savedGoals = List<Goal>.of(_goals)..[index] = updatedGoal;
+      try {
+        await _storage.save(savedGoals);
+      } catch (error) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Could not save scanned progress. Please try again.'),
+          ),
+        );
+        return;
+      }
+      if (!mounted) return;
+      setState(() => _goals[index] = updatedGoal);
+      if (!previousGoal.hasCompletedAllTasks &&
+          updatedGoal.hasCompletedAllTasks) {
+        Confetti.launch(
+          context,
+          options: const ConfettiOptions(particleCount: 100, spread: 90),
+        );
+        unawaited(_playCelebration());
+      }
+    } finally {
+      _scanning = false;
+    }
+  }
+
+  Future<void> _playCelebration() async {
+    try {
+      final player = _celebrationPlayer ??= AudioPlayer();
+      await player.stop();
+      if (!mounted) return;
+      await player.play(AssetSource('sounds/goal_complete.wav'));
+    } catch (error) {
+      // Audio availability must not affect successfully saved progress.
+      debugPrint('Unable to play goal celebration: $error');
+    }
   }
 
   @override

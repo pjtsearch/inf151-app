@@ -1,0 +1,4 @@
+goal_complete.wav is an original synthesized ascending chime created for this project.
+Dedicated to the public domain under CC0 1.0 Universal.
+You may use, modify, and redistribute it without attribution.
+https://creativecommons.org/publicdomain/zero/1.0/
