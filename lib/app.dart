@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 
+import 'screens/auth_gate.dart';
 import 'screens/goals_page.dart';
+import 'screens/login_page.dart';
 import 'services/goal_reminder_service.dart';
 
 class GoalApp extends StatelessWidget {
-  const GoalApp({super.key, this.reminderService});
+  const GoalApp({super.key, this.reminderService, this.firebaseError});
 
   final GoalReminderService? reminderService;
+  final Object? firebaseError;
 
   @override
   Widget build(BuildContext context) {
@@ -16,9 +19,43 @@ class GoalApp extends StatelessWidget {
       theme: _buildTheme(Brightness.light),
       darkTheme: _buildTheme(Brightness.dark),
       themeMode: ThemeMode.system,
-      home: GoalsPage(reminderService: reminderService),
+      home: firebaseError != null
+          ? FirebaseSetupPage(error: firebaseError!)
+          : AuthGate(
+              signedIn: GoalsPage(reminderService: reminderService),
+              signedOut: const LoginPage(),
+            ),
     );
   }
+}
+
+class FirebaseSetupPage extends StatelessWidget {
+  const FirebaseSetupPage({super.key, required this.error});
+
+  final Object error;
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    body: Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 480),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Connect Firebase', style: Theme.of(context).textTheme.headlineMedium),
+              const SizedBox(height: 12),
+              const Text('Run `flutterfire configure` for this project, then restart the app.'),
+              const SizedBox(height: 12),
+              Text('$error', style: Theme.of(context).textTheme.bodySmall),
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
 }
 
 ThemeData _buildTheme(Brightness brightness) {

@@ -1,0 +1,46 @@
+{
+  "project_info": {
+    "project_number": "98519967903",
+    "project_id": "goalpunch-6c0bb",
+    "storage_bucket": "goalpunch-6c0bb.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:98519967903:android:e0aee3b88f7b1803b71aaa",
+        "android_client_info": {
+          "package_name": "com.example.inf151_app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "98519967903-rvi7drof6uc5afk9h15qkpluvamip82v.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDkEcOfgXL59OfHVpZo2gF_V4iJfUk1Lvs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "98519967903-rvi7drof6uc5afk9h15qkpluvamip82v.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "98519967903-qen5m2gr1d3ipfe3hn3ilkg7ti4kdkde.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.inf151App"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

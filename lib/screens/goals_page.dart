@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter_confetti/flutter_confetti.dart';
 import 'package:onboarding_overlay/onboarding_overlay.dart';
@@ -346,9 +347,12 @@ class _GoalsPageState extends State<GoalsPage>
     ),
   );
 
-  Future<void> _openAccount() => Navigator.of(context).push<void>(
-    MaterialPageRoute(builder: (_) => const AccountPage()),
-  );
+  Future<void> _openAccount() async {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(builder: (_) => const AccountPage()),
+    );
+    if (mounted) setState(() {});
+  }
 
   Future<bool> _confirmDeleteGoal(Goal goal) async {
     final confirmed = await showDialog<bool>(
@@ -525,6 +529,17 @@ class _GoalsPageState extends State<GoalsPage>
     }
   }
 
+  Widget _accountAvatar() {
+    final photoUrl = FirebaseAuth.instance.currentUser?.photoURL;
+    return CircleAvatar(
+      radius: 17,
+      backgroundImage: photoUrl == null ? null : NetworkImage(photoUrl),
+      child: photoUrl == null
+          ? const Icon(Icons.account_circle_outlined, size: 25)
+          : null,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final now = DateTime.now();
@@ -677,7 +692,7 @@ class _GoalsPageState extends State<GoalsPage>
                         IconButton(
                           tooltip: 'Account',
                           onPressed: _loading ? null : _openAccount,
-                          icon: const Icon(Icons.account_circle_outlined),
+                          icon: _accountAvatar(),
                         ),
                       ],
                     ],

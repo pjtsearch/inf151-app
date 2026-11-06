@@ -1,9 +1,9 @@
-import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 
 class AccountPage extends StatefulWidget {
   const AccountPage({super.key});
@@ -13,10 +13,9 @@ class AccountPage extends StatefulWidget {
 }
 
 class _AccountPageState extends State<AccountPage> {
-  static const _nameKey = 'account_name';
-  static const _photoKey = 'account_photo';
   final _nameController = TextEditingController();
   final _picker = ImagePicker();
+  final _auth = FirebaseAuth.instance;
   Uint8List? _photo;
   bool _loading = true;
   bool _saving = false;
@@ -34,12 +33,10 @@ class _AccountPageState extends State<AccountPage> {
   }
 
   Future<void> _load() async {
-    final prefs = await SharedPreferences.getInstance();
-    final encoded = prefs.getString(_photoKey);
+    final user = _auth.currentUser;
     if (!mounted) return;
     setState(() {
-      _nameController.text = prefs.getString(_nameKey) ?? '';
-      _photo = encoded == null ? null : base64Decode(encoded);
+      _nameController.text = user?.displayName ?? '';
       _loading = false;
     });
   }
@@ -60,15 +57,30 @@ class _AccountPageState extends State<AccountPage> {
   Future<void> _save() async {
     setState(() => _saving = true);
     try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_nameKey, _nameController.text.trim());
+      final user = _auth.currentUser;
+      if (user == null) throw StateError('No signed-in account.');
+
+      await user.updateDisplayName(_nameController.text.trim());
       final photo = _photo;
-      if (photo == null) {
-        await prefs.remove(_photoKey);
-      } else {
-        await prefs.setString(_photoKey, base64Encode(photo));
+      if (photo != null) {
+        final photoRef = FirebaseStorage.instance
+            .ref()
+            .child('profile_pictures/${user.uid}/profile.jpg');
+        await photoRef.putData(
+          photo,
+          SettableMetadata(contentType: 'image/jpeg'),
+        );
+        await user.updatePhotoURL(await photoRef.getDownloadURL());
       }
-      if (mounted) Navigator.of(context).pop();
+      await user.reload();
+      if (!mounted) return;
+      Navigator.of(context).pop();
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not save account changes. Please try again.')),
+        );
+      }
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -76,6 +88,7 @@ class _AccountPageState extends State<AccountPage> {
 
   @override
   Widget build(BuildContext context) {
+    final profilePhotoUrl = _auth.currentUser?.photoURL;
     return Scaffold(
       appBar: AppBar(title: const Text('Account')),
       body: SafeArea(
@@ -92,10 +105,12 @@ class _AccountPageState extends State<AccountPage> {
                           children: [
                             CircleAvatar(
                               radius: 58,
-                              backgroundImage: _photo == null
-                                  ? null
-                                  : MemoryImage(_photo!),
-                              child: _photo == null
+                              backgroundImage: _photo != null
+                                  ? MemoryImage(_photo!)
+                                  : profilePhotoUrl != null
+                                  ? NetworkImage(profilePhotoUrl)
+                                  : null,
+                              child: _photo == null && profilePhotoUrl == null
                                   ? const Icon(Icons.person_outline, size: 56)
                                   : null,
                             ),
@@ -125,6 +140,21 @@ class _AccountPageState extends State<AccountPage> {
                       FilledButton(
                         onPressed: _saving ? null : _save,
                         child: Text(_saving ? 'Saving…' : 'Save changes'),
+                      ),
+                      const SizedBox(height: 32),
+                      const Divider(),
+                      const SizedBox(height: 12),
+                      Text('Sign-in account', style: Theme.of(context).textTheme.titleMedium),
+                      const SizedBox(height: 4),
+                      Text(FirebaseAuth.instance.currentUser?.email ?? ''),
+                      const SizedBox(height: 16),
+                      OutlinedButton.icon(
+                        onPressed: () async {
+                          await FirebaseAuth.instance.signOut();
+                          if (context.mounted) Navigator.of(context).pop();
+                        },
+                        icon: const Icon(Icons.logout),
+                        label: const Text('Sign out'),
                       ),
                     ],
                   ),
