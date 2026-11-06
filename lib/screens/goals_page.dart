@@ -17,7 +17,6 @@ import 'print_preview_page.dart';
 import 'scan_card_page.dart';
 import 'settings_page.dart';
 import 'account_page.dart';
-import 'requests_page.dart';
 import '../services/child_storage.dart';
 import '../services/goal_storage.dart';
 import '../services/punch_card_pdf.dart';
@@ -351,10 +350,6 @@ class _GoalsPageState extends State<GoalsPage>
     MaterialPageRoute(builder: (_) => const AccountPage()),
   );
 
-  Future<void> _openRequests() => Navigator.of(context).push<void>(
-    MaterialPageRoute(builder: (_) => const RequestsPage()),
-  );
-
   Future<bool> _confirmDeleteGoal(Goal goal) async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -678,11 +673,6 @@ class _GoalsPageState extends State<GoalsPage>
                           tooltip: 'Settings',
                           onPressed: _loading ? null : _openSettings,
                           icon: const Icon(Icons.settings_outlined),
-                        ),
-                        IconButton(
-                          tooltip: 'Requests',
-                          onPressed: _loading ? null : _openRequests,
-                          icon: const Icon(Icons.person_add_alt_1_outlined),
                         ),
                         IconButton(
                           tooltip: 'Account',
