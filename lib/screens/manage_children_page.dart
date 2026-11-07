@@ -13,6 +13,7 @@ class ManageChildrenPage extends StatefulWidget {
     super.key,
     required this.children,
     required this.onSave,
+    this.onDelete,
     this.onLink,
     required this.onReorder,
     this.goals = const [],
@@ -20,6 +21,7 @@ class ManageChildrenPage extends StatefulWidget {
 
   final List<Child> children;
   final Future<void> Function(Child child) onSave;
+  final Future<bool> Function(Child child)? onDelete;
   final Future<Child> Function(String childId)? onLink;
   final Future<void> Function(List<Child> children) onReorder;
   final List<Goal> goals;
@@ -51,10 +53,19 @@ class _ManageChildrenPageState extends State<ManageChildrenPage> {
     if (_savingOrder || _linkingChild || _draggingChildId != null) return;
     final savedChild = await Navigator.of(context).push<Child>(
       MaterialPageRoute(
-        builder: (_) => ChildFormPage(child: child, onSave: widget.onSave),
+        builder: (_) => ChildFormPage(
+          child: child,
+          onSave: widget.onSave,
+          onDelete: widget.onDelete,
+        ),
       ),
     );
-    if (savedChild == null || !mounted) return;
+    if (!mounted) return;
+    if (savedChild == null) return;
+    if (savedChild.id.isEmpty && child != null) {
+      setState(() => _children.removeWhere((item) => item.id == child.id));
+      return;
+    }
     setState(() {
       final index = _children.indexWhere((item) => item.id == savedChild.id);
       if (index < 0) {

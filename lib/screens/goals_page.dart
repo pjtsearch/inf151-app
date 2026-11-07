@@ -320,6 +320,22 @@ class _GoalsPageState extends State<GoalsPage>
         children: _children,
         goals: _goals,
         onSave: _saveChild,
+        onDelete: (child) async {
+          final childDeleted = await _childStorage.deleteForCurrentParent(child.id);
+          if (!mounted) return childDeleted;
+          final remaining = _children.where((item) => item.id != child.id).toList();
+          setState(() {
+            _children
+              ..clear()
+              ..addAll(remaining);
+            if (_selectedChildId == child.id) _selectedChildId = null;
+          });
+          if (childDeleted) {
+            _goals.removeWhere((goal) => goal.childId == child.id);
+          }
+          await _syncReminders();
+          return childDeleted;
+        },
         onLink: _linkChild,
         onReorder: _saveChildren,
       ),

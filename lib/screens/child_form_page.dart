@@ -10,9 +10,10 @@ import '../widgets/child_avatar.dart';
 import '../widgets/child_id_qr_code.dart';
 
 class ChildFormPage extends StatefulWidget {
-  const ChildFormPage({super.key, required this.onSave, this.child});
+  const ChildFormPage({super.key, required this.onSave, this.onDelete, this.child});
 
   final Future<void> Function(Child child) onSave;
+  final Future<bool> Function(Child child)? onDelete;
   final Child? child;
 
   @override
@@ -26,6 +27,7 @@ class _ChildFormPageState extends State<ChildFormPage> {
   late ChildColor _color;
   bool _pickingPhoto = false;
   bool _saving = false;
+  bool _deleting = false;
 
   @override
   void initState() {
@@ -100,9 +102,46 @@ class _ChildFormPageState extends State<ChildFormPage> {
     }
   }
 
+  Future<void> _delete() async {
+    final child = widget.child;
+    final onDelete = widget.onDelete;
+    if (child == null || onDelete == null || _saving || _deleting) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Delete ${child.name}?'),
+        content: const Text(
+          'This removes the child from your account. If you are the only parent, the child and your tasks for them will be deleted.',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          FilledButton.tonal(onPressed: () => Navigator.pop(context, true), child: const Text('Delete')),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    setState(() => _deleting = true);
+    try {
+      final childDeleted = await onDelete(child);
+      if (mounted) {
+        Navigator.pop(
+          context,
+          childDeleted ? const Child(id: '', name: '') : child,
+        );
+      }
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not delete child. Please try again.')),
+      );
+    } finally {
+      if (mounted) setState(() => _deleting = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) => PopScope(
-    canPop: !_saving,
+    canPop: !_saving && !_deleting,
     child: Scaffold(
       appBar: AppBar(
         title: Text(widget.child == null ? 'Add child' : 'Edit child'),
@@ -245,6 +284,17 @@ class _ChildFormPageState extends State<ChildFormPage> {
                           : 'Save changes',
                     ),
                   ),
+                  if (widget.child != null && widget.onDelete != null) ...[
+                    const SizedBox(height: 12),
+                    OutlinedButton.icon(
+                      onPressed: _saving || _deleting || _pickingPhoto ? null : _delete,
+                      icon: const Icon(Icons.delete_outline),
+                      label: Text(_deleting ? 'Deleting…' : 'Delete child'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Theme.of(context).colorScheme.error,
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),

@@ -64,14 +64,17 @@ class ChildStorage {
 
   /// Removes this parent from a child. If no other parents remain, deletes the
   /// child and this parent's goals (tasks) associated with it.
-  Future<void> deleteForCurrentParent(String childId) async {
+  Future<bool> deleteForCurrentParent(String childId) async {
     final parentId = _parentId;
     final childRef = _children.doc(childId);
     final parentRef = _db.collection('parents').doc(parentId);
     final childSnapshot = await childRef.get();
     if (!childSnapshot.exists) {
-      await parentRef.update({'childIds': FieldValue.arrayRemove([childId])});
-      return;
+      await parentRef.set(
+        {'childIds': FieldValue.arrayRemove([childId])},
+        SetOptions(merge: true),
+      );
+      return true;
     }
 
     final parentIds = (childSnapshot.data()?['parentIds'] as List<dynamic>? ?? const [])
@@ -83,7 +86,7 @@ class ChildStorage {
     if (parentIds.isNotEmpty) {
       batch.update(childRef, {'parentIds': parentIds.toList()});
       await batch.commit();
-      return;
+      return false;
     }
 
     batch.delete(childRef);
@@ -96,6 +99,7 @@ class ChildStorage {
       batch.delete(goal.reference);
     }
     await batch.commit();
+    return true;
   }
 
   Future<void> save(List<Child> children) async {
