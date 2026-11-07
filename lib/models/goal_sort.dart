@@ -3,6 +3,7 @@ import 'goal.dart';
 enum GoalSortBy {
   endDate('End date'),
   creationDate('Creation date'),
+  createdByMe('Created by me'),
   progress('Progress');
 
   const GoalSortBy(this.label);
@@ -18,19 +19,25 @@ class GoalSort {
   String get ascendingDescription => switch (by) {
     GoalSortBy.endDate => 'Earliest first',
     GoalSortBy.creationDate => 'Oldest first',
+    GoalSortBy.createdByMe => 'Mine first',
     GoalSortBy.progress => 'Lowest progress first',
   };
 
   String get descendingDescription => switch (by) {
     GoalSortBy.endDate => 'Latest first',
     GoalSortBy.creationDate => 'Newest first',
+    GoalSortBy.createdByMe => 'Mine last',
     GoalSortBy.progress => 'Highest progress first',
   };
 
-  int compare(Goal a, Goal b) {
+  int compare(Goal a, Goal b, {String? currentParentId}) {
     var result = switch (by) {
       GoalSortBy.endDate => a.endDate.compareTo(b.endDate),
       GoalSortBy.creationDate => a.createdAt.compareTo(b.createdAt),
+      GoalSortBy.createdByMe =>
+        (a.creatorId == currentParentId ? 0 : 1).compareTo(
+          b.creatorId == currentParentId ? 0 : 1,
+        ),
       GoalSortBy.progress => a.progress.compareTo(b.progress),
     };
     if (result == 0) result = a.createdAt.compareTo(b.createdAt);

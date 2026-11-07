@@ -9,6 +9,7 @@ class GoalCard extends StatelessWidget {
   const GoalCard({
     super.key,
     required this.goal,
+    required this.isCreatedByMe,
     required this.child,
     required this.isPast,
     required this.onCopy,
@@ -21,6 +22,7 @@ class GoalCard extends StatelessWidget {
   });
 
   final Goal goal;
+  final bool isCreatedByMe;
   final Child? child;
   final bool isPast;
   final VoidCallback onCopy;
@@ -144,6 +146,13 @@ class GoalCard extends StatelessWidget {
                   style: theme.textTheme.titleLarge?.copyWith(
                     fontSize: 20,
                     fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  isCreatedByMe ? 'You' : goal.creatorName,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: colors.onSurfaceVariant,
                   ),
                 ),
                 const SizedBox(height: 4),

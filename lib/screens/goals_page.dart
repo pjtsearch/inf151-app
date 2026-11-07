@@ -314,33 +314,39 @@ class _GoalsPageState extends State<GoalsPage>
     MaterialPageRoute(builder: (_) => ChildFormPage(onSave: _saveChild)),
   );
 
-  Future<void> _manageChildren() => Navigator.of(context).push<void>(
-    MaterialPageRoute(
-      builder: (_) => ManageChildrenPage(
-        children: _children,
-        goals: _goals,
-        onSave: _saveChild,
-        onDelete: (child) async {
-          final childDeleted = await _childStorage.deleteForCurrentParent(child.id);
-          if (!mounted) return childDeleted;
-          final remaining = _children.where((item) => item.id != child.id).toList();
-          setState(() {
-            _children
-              ..clear()
-              ..addAll(remaining);
-            if (_selectedChildId == child.id) _selectedChildId = null;
-          });
-          if (childDeleted) {
-            _goals.removeWhere((goal) => goal.childId == child.id);
-          }
-          await _syncReminders();
-          return childDeleted;
-        },
-        onLink: _linkChild,
-        onReorder: _saveChildren,
+  Future<void> _manageChildren() async {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        builder: (_) => ManageChildrenPage(
+          children: _children,
+          goals: _goals,
+          onSave: _saveChild,
+          onDelete: (child) async {
+            await _childStorage.deleteForCurrentParent(child.id);
+            if (!mounted) return true;
+            final remaining = _children
+                .where((item) => item.id != child.id)
+                .toList();
+            setState(() {
+              _children
+                ..clear()
+                ..addAll(remaining);
+              if (_selectedChildId == child.id) _selectedChildId = null;
+              _goals.removeWhere((goal) => goal.childId == child.id);
+              _selectedGoalIds.removeWhere(
+                (goalId) => !_goals.any((goal) => goal.id == goalId),
+              );
+            });
+            await _syncReminders();
+            return true;
+          },
+          onLink: _linkChild,
+          onReorder: _saveChildren,
+        ),
       ),
-    ),
-  );
+    );
+    if (mounted) await _loadGoals();
+  }
 
   Future<void> _addChild() async {
     final child = await _createChild();
@@ -369,16 +375,23 @@ class _GoalsPageState extends State<GoalsPage>
       ),
     );
     if (result == null || !mounted) return;
+    final user = FirebaseAuth.instance.currentUser;
+    final goalToSave = result.copyWith(
+      creatorId: result.creatorId.isEmpty ? user?.uid : result.creatorId,
+      creatorName: result.creatorName.isEmpty
+          ? user?.displayName ?? 'A parent'
+          : result.creatorName,
+    );
 
     _statusController.animateTo(0);
     setState(() {
       _showPast = false;
-      if (_selectedChildId != null) _selectedChildId = result.childId;
-      final index = _goals.indexWhere((item) => item.id == result.id);
+      if (_selectedChildId != null) _selectedChildId = goalToSave.childId;
+      final index = _goals.indexWhere((item) => item.id == goalToSave.id);
       if (index < 0) {
-        _goals.add(result);
+        _goals.add(goalToSave);
       } else {
-        _goals[index] = result;
+        _goals[index] = goalToSave;
       }
     });
     await _saveGoals();
@@ -389,6 +402,8 @@ class _GoalsPageState extends State<GoalsPage>
       id: DateTime.now().microsecondsSinceEpoch.toString(),
       startDate: today(),
       completedTasks: 0,
+      creatorId: FirebaseAuth.instance.currentUser?.uid ?? '',
+      creatorName: FirebaseAuth.instance.currentUser?.displayName ?? 'A parent',
     );
     await _editGoal(goal: copy, isCopy: true);
   }
@@ -450,11 +465,12 @@ class _GoalsPageState extends State<GoalsPage>
 
   Future<void> _removeGoal(Goal goal) async {
     if (!mounted) return;
+    await _storage.deleteGoals([goal.id]);
     setState(() {
       _goals.removeWhere((item) => item.id == goal.id);
       _selectedGoalIds.remove(goal.id);
     });
-    await _saveGoals();
+    await _syncReminders();
   }
 
   void _toggleGoalSelection(Goal goal) {
@@ -496,7 +512,7 @@ class _GoalsPageState extends State<GoalsPage>
       final remaining = _goals
           .where((goal) => !selectedIds.contains(goal.id))
           .toList();
-      await _storage.save(remaining);
+      await _storage.deleteGoals(selectedIds);
       if (!mounted) return;
       setState(() {
         _goals
@@ -520,7 +536,11 @@ class _GoalsPageState extends State<GoalsPage>
   Future<void> _printSelectedGoals() {
     final selected =
         _goals.where((goal) => _selectedGoalIds.contains(goal.id)).toList()
-          ..sort(_sort.compare);
+          ..sort((a, b) => _sort.compare(
+            a,
+            b,
+            currentParentId: FirebaseAuth.instance.currentUser?.uid,
+          ));
     return _printPunchCards(selected);
   }
 
@@ -624,7 +644,11 @@ class _GoalsPageState extends State<GoalsPage>
                       goal.childId == _selectedChildId),
             )
             .toList()
-          ..sort(_sort.compare);
+          ..sort((a, b) => _sort.compare(
+            a,
+            b,
+            currentParentId: FirebaseAuth.instance.currentUser?.uid,
+          ));
 
     return Onboarding(
       key: _onboardingKey,
@@ -650,9 +674,9 @@ class _GoalsPageState extends State<GoalsPage>
           body: Stack(
             fit: StackFit.expand,
             children: [
-              CustomScrollView(
+              NestedScrollView(
                 controller: _scrollController,
-                slivers: [
+                headerSliverBuilder: (context, innerBoxIsScrolled) => [
                   SliverAppBar.large(
                     leading: _selecting
                         ? IconButton(
@@ -708,6 +732,12 @@ class _GoalsPageState extends State<GoalsPage>
                           icon: const Icon(Icons.delete_outline),
                         ),
                       ] else ...[
+                        if (kIsWeb)
+                          IconButton(
+                            tooltip: 'Reload tasks',
+                            onPressed: _loading ? null : _loadGoals,
+                            icon: const Icon(Icons.refresh),
+                          ),
                           IconButton(
                             tooltip: 'Reset children and goals for onboarding (debug)',
                             onPressed:
@@ -763,7 +793,7 @@ class _GoalsPageState extends State<GoalsPage>
                         ),
                       ],
                     ],
-                    bottom: _loading
+                    bottom: _loading && _children.isEmpty
                         ? null
                         : PreferredSize(
                             preferredSize: const Size.fromHeight(108),
@@ -818,6 +848,12 @@ class _GoalsPageState extends State<GoalsPage>
                             ),
                           ),
                   ),
+                ],
+                body: RefreshIndicator(
+                  onRefresh: _loadGoals,
+                  child: CustomScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    slivers: [
                   if (_loading)
                     const SliverFillRemaining(
                       hasScrollBody: false,
@@ -858,6 +894,7 @@ class _GoalsPageState extends State<GoalsPage>
                           final goal = goals[index];
                           final card = GoalCard(
                             goal: goal,
+                            isCreatedByMe: goal.creatorId == FirebaseAuth.instance.currentUser?.uid,
                             child: _children
                                 .where((child) => child.id == goal.childId)
                                 .firstOrNull,
@@ -891,7 +928,9 @@ class _GoalsPageState extends State<GoalsPage>
                         },
                       ),
                     ),
-                ],
+                    ],
+                  ),
+                ),
               ),
               if (!_loading) const _BottomSurfaceGradient(),
             ],

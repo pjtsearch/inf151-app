@@ -35,6 +35,8 @@ class Goal {
     required this.durationUnit,
     required this.startDate,
     DateTime? createdAt,
+    this.creatorId = '',
+    this.creatorName = '',
     this.reward = const FreeTextReward(''),
     this.completedTasks = 0,
   }) : createdAt = createdAt ?? startDate;
@@ -48,6 +50,8 @@ class Goal {
   final DurationUnit durationUnit;
   final DateTime startDate;
   final DateTime createdAt;
+  final String creatorId;
+  final String creatorName;
   final GoalReward reward;
   final int completedTasks;
 
@@ -117,6 +121,8 @@ class Goal {
     DurationUnit? durationUnit,
     DateTime? startDate,
     DateTime? createdAt,
+    String? creatorId,
+    String? creatorName,
     GoalReward? reward,
     int? completedTasks,
   }) => Goal(
@@ -129,6 +135,8 @@ class Goal {
     durationUnit: durationUnit ?? this.durationUnit,
     startDate: startDate ?? this.startDate,
     createdAt: createdAt ?? this.createdAt,
+    creatorId: creatorId ?? this.creatorId,
+    creatorName: creatorName ?? this.creatorName,
     reward: reward ?? this.reward,
     completedTasks: completedTasks ?? this.completedTasks,
   );
@@ -143,6 +151,7 @@ class Goal {
     'durationUnit': durationUnit.name,
     'startDate': startDate.toIso8601String(),
     'createdAt': createdAt.toIso8601String(),
+    'creatorName': creatorName,
     'reward': reward.toJson(),
     'completedTasks': completedTasks,
   };
@@ -157,6 +166,8 @@ class Goal {
     durationUnit: DurationUnit.values.byName(json['durationUnit'] as String),
     startDate: DateTime.parse(json['startDate'] as String),
     createdAt: DateTime.tryParse(json['createdAt'] as String? ?? ''),
+    creatorId: json['parentId'] as String? ?? json['creatorId'] as String? ?? '',
+    creatorName: json['creatorName'] as String? ?? '',
     reward: GoalReward.fromJson(json['reward']),
     completedTasks:
         json['completedTasks'] as int? ??

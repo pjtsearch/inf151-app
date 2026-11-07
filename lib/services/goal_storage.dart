@@ -36,26 +36,52 @@ class GoalStorage {
 
   Future<List<Goal>> load() async {
     final parentId = _parentId;
-    final snapshot = await _goals.where('parentId', isEqualTo: parentId).get();
-    return snapshot.docs
+    final parentData = (await _parent.get()).data();
+    final childIds = (parentData?['childIds'] as List<dynamic>? ?? const [])
+        .whereType<String>()
+        .toList();
+    final documents = <QueryDocumentSnapshot<Map<String, dynamic>>>[];
+    for (final childId in childIds) {
+      final snapshot = await _goals
+          .where('childId', isEqualTo: childId)
+          .get();
+      documents.addAll(snapshot.docs);
+    }
+    return documents
         .map((doc) => Goal.fromJson({...doc.data(), 'id': doc.id}))
         .toList();
   }
 
   Future<void> save(List<Goal> goals) async {
     final parentId = _parentId;
-    final current = await _goals.where('parentId', isEqualTo: parentId).get();
-    final nextIds = goals.map((goal) => goal.id).toSet();
     final batch = _db.batch();
     for (final goal in goals) {
+      final creatorId = goal.creatorId.isEmpty ? parentId : goal.creatorId;
+      if (creatorId != parentId) {
+        batch.update(_goals.doc(goal.id), {'completedTasks': goal.completedTasks});
+        continue;
+      }
       batch.set(_goals.doc(goal.id), {
         ...goal.toJson(),
-        'parentId': parentId,
+        'parentId': creatorId,
+        'creatorName': goal.creatorName.isNotEmpty
+            ? goal.creatorName
+            : creatorId == parentId
+            ? (_auth.currentUser?.displayName ?? 'A parent')
+            : 'Another parent',
       });
     }
-    for (final document in current.docs) {
-      if (!nextIds.contains(document.id)) batch.delete(document.reference);
-    }
     await batch.commit();
+  }
+
+  Future<void> deleteGoals(Iterable<String> goalIds) async {
+    final ids = goalIds.toSet().toList();
+    for (var start = 0; start < ids.length; start += 500) {
+      final batch = _db.batch();
+      for (final id in ids.skip(start).take(500)) {
+        batch.delete(_goals.doc(id));
+      }
+      await batch.commit();
+    }
   }
 }

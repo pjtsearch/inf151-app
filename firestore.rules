@@ -41,18 +41,26 @@ service cloud.firestore {
     }
 
     match /goals/{goalId} {
-      allow read, delete: if resource.data.parentId == request.auth.uid;
+      allow read, delete: if request.auth != null
+          && get(
+            /databases/$(database)/documents/children/$(resource.data.childId)
+          ).data.parentIds.hasAny([request.auth.uid]);
       allow create: if request.auth != null
           && request.resource.data.parentId == request.auth.uid
           && request.resource.data.childId in get(
             /databases/$(database)/documents/parents/$(request.auth.uid)
           ).data.childIds;
       allow update: if request.auth != null
-          && resource.data.parentId == request.auth.uid
-          && request.resource.data.parentId == request.auth.uid
+          && resource.data.childId == request.resource.data.childId
+          && request.resource.data.parentId == resource.data.parentId
           && request.resource.data.childId in get(
             /databases/$(database)/documents/parents/$(request.auth.uid)
-          ).data.childIds;
+          ).data.childIds
+          && (
+            resource.data.parentId == request.auth.uid
+            || request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['completedTasks'])
+          );
     }
   }
 }

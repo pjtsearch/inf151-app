@@ -80,6 +80,8 @@ class _GoalFormSheetState extends State<GoalFormSheet> {
       Goal(
         id: current?.id ?? now.microsecondsSinceEpoch.toString(),
         createdAt: widget.isCopy ? now : current?.createdAt ?? now,
+        creatorId: current?.creatorId ?? '',
+        creatorName: current?.creatorName ?? '',
         childId: _selectedChildId!,
         title: _titleController.text.trim(),
         frequency: int.parse(_frequencyController.text),
