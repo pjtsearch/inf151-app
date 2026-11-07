@@ -52,6 +52,7 @@ class _LoginPageState extends State<LoginPage> {
           password: _password.text,
         );
       }
+      _returnToApp();
     } on FirebaseAuthException catch (error) {
       _showError(_friendlyAuthError(error));
     } catch (_) {
@@ -85,6 +86,7 @@ class _LoginPageState extends State<LoginPage> {
         final credential = GoogleAuthProvider.credential(idToken: idToken);
         await auth.signInWithCredential(credential);
       }
+      _returnToApp();
     } on FirebaseAuthException catch (error) {
       _showError(_friendlyAuthError(error));
     } on GoogleSignInException catch (error) {
@@ -118,6 +120,10 @@ class _LoginPageState extends State<LoginPage> {
 
   void _showError(String message) {
     if (mounted) setState(() => _error = message);
+  }
+
+  void _returnToApp() {
+    if (mounted) Navigator.of(context).popUntil((route) => route.isFirst);
   }
 
   void _toggleMode() => setState(() {

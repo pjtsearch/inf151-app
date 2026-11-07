@@ -17,6 +17,7 @@ class GoalCard extends StatelessWidget {
     required this.onPrint,
     this.selectionMode = false,
     this.isSelected = false,
+    this.readOnly = false,
     this.onTap,
     this.onLongPress,
   });
@@ -30,6 +31,7 @@ class GoalCard extends StatelessWidget {
   final VoidCallback onPrint;
   final bool selectionMode;
   final bool isSelected;
+  final bool readOnly;
   final VoidCallback? onTap;
   final VoidCallback? onLongPress;
 
@@ -99,45 +101,47 @@ class GoalCard extends StatelessWidget {
                       )
                     else
                       const Spacer(),
-                    const SizedBox(width: 8),
-                    if (selectionMode)
-                      Checkbox(
-                        value: isSelected,
-                        onChanged: (_) => onTap?.call(),
-                        semanticLabel: 'Select ${goal.title}',
-                      )
-                    else
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          IconButton(
-                            tooltip: 'Make a copy',
-                            onPressed: onCopy,
-                            icon: const Icon(Icons.copy_outlined, size: 20),
-                            visualDensity: VisualDensity.compact,
-                          ),
-                          if (!isPast)
+                    if (!readOnly) ...[
+                      const SizedBox(width: 8),
+                      if (selectionMode)
+                        Checkbox(
+                          value: isSelected,
+                          onChanged: (_) => onTap?.call(),
+                          semanticLabel: 'Select ${goal.title}',
+                        )
+                      else
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
                             IconButton(
-                              tooltip: 'Print punch card',
-                              onPressed: onPrint,
-                              icon: const Icon(Icons.print_outlined, size: 20),
+                              tooltip: 'Make a copy',
+                              onPressed: onCopy,
+                              icon: const Icon(Icons.copy_outlined, size: 20),
                               visualDensity: VisualDensity.compact,
                             ),
-                          PopupMenuButton<String>(
-                            tooltip: 'Goal options',
-                            icon: const Icon(Icons.more_horiz),
-                            onSelected: (action) {
-                              if (action == 'delete') onDelete();
-                            },
-                            itemBuilder: (_) => const [
-                              PopupMenuItem(
-                                value: 'delete',
-                                child: Text('Delete'),
+                            if (!isPast)
+                              IconButton(
+                                tooltip: 'Print punch card',
+                                onPressed: onPrint,
+                                icon: const Icon(Icons.print_outlined, size: 20),
+                                visualDensity: VisualDensity.compact,
                               ),
-                            ],
-                          ),
-                        ],
-                      ),
+                            PopupMenuButton<String>(
+                              tooltip: 'Goal options',
+                              icon: const Icon(Icons.more_horiz),
+                              onSelected: (action) {
+                                if (action == 'delete') onDelete();
+                              },
+                              itemBuilder: (_) => const [
+                                PopupMenuItem(
+                                  value: 'delete',
+                                  child: Text('Delete'),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                    ],
                   ],
                 ),
                 const SizedBox(height: 4),

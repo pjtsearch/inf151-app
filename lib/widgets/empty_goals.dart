@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
 
 class EmptyGoals extends StatelessWidget {
-  const EmptyGoals({super.key, required this.isPast});
+  const EmptyGoals({
+    super.key,
+    required this.isPast,
+    this.activeMessage = 'Add a goal to get started.',
+  });
 
   final bool isPast;
+  final String activeMessage;
 
   @override
   Widget build(BuildContext context) => Center(
@@ -26,7 +31,7 @@ class EmptyGoals extends StatelessWidget {
           Text(
             isPast
                 ? 'Finished goals will appear here.'
-                : 'Add a goal to get started.',
+                : activeMessage,
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.bodyMedium,
           ),

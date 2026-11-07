@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_zxing/flutter_zxing.dart';
 
 class LinkChildQrPage extends StatefulWidget {
-  const LinkChildQrPage({super.key});
+  const LinkChildQrPage({super.key, this.title = 'Link a child'});
+
+  final String title;
 
   @override
   State<LinkChildQrPage> createState() => _LinkChildQrPageState();
@@ -104,7 +106,7 @@ class _LinkChildQrPageState extends State<LinkChildQrPage> {
   Widget build(BuildContext context) {
     final camera = _camera;
     return Scaffold(
-      appBar: AppBar(title: const Text('Link a child')),
+      appBar: AppBar(title: Text(widget.title)),
       body: Stack(
         fit: StackFit.expand,
         children: [

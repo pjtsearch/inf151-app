@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 
 import 'screens/auth_gate.dart';
+import 'screens/child_mode_router.dart';
 import 'screens/goals_page.dart';
-import 'screens/login_page.dart';
+import 'screens/welcome_page.dart';
 import 'services/goal_reminder_service.dart';
 
 class GoalApp extends StatelessWidget {
@@ -23,7 +24,8 @@ class GoalApp extends StatelessWidget {
           ? FirebaseSetupPage(error: firebaseError!)
           : AuthGate(
               signedIn: GoalsPage(reminderService: reminderService),
-              signedOut: const LoginPage(),
+              anonymous: ChildModeRouter(reminderService: reminderService),
+              signedOut: const WelcomePage(),
             ),
     );
   }

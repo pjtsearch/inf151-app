@@ -2,10 +2,16 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 class AuthGate extends StatelessWidget {
-  const AuthGate({super.key, required this.signedIn, required this.signedOut});
+  const AuthGate({
+    super.key,
+    required this.signedIn,
+    required this.signedOut,
+    this.anonymous,
+  });
 
   final Widget signedIn;
   final Widget signedOut;
+  final Widget? anonymous;
 
   @override
   Widget build(BuildContext context) => StreamBuilder<User?>(
@@ -14,7 +20,10 @@ class AuthGate extends StatelessWidget {
       if (snapshot.connectionState == ConnectionState.waiting) {
         return const Scaffold(body: Center(child: CircularProgressIndicator()));
       }
-      return snapshot.data == null ? signedOut : signedIn;
+      final user = snapshot.data;
+      if (user == null) return signedOut;
+      if (user.isAnonymous) return anonymous ?? signedOut;
+      return signedIn;
     },
   );
 }

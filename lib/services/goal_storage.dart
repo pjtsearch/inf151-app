@@ -52,6 +52,13 @@ class GoalStorage {
         .toList();
   }
 
+  Future<List<Goal>> loadForChild(String childId) async {
+    final snapshot = await _goals.where('childId', isEqualTo: childId).get();
+    return snapshot.docs
+        .map((doc) => Goal.fromJson({...doc.data(), 'id': doc.id}))
+        .toList();
+  }
+
   Future<void> save(List<Goal> goals) async {
     final parentId = _parentId;
     final batch = _db.batch();
