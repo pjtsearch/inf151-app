@@ -18,13 +18,24 @@ service cloud.firestore {
       allow create: if request.auth != null
           && request.resource.data.parentIds.hasAny([request.auth.uid]);
       allow update: if request.auth != null
-          && resource.data.parentIds.hasAny([request.auth.uid])
           && (
-            request.resource.data.parentIds.hasAll(resource.data.parentIds)
+            (
+              resource.data.parentIds.hasAny([request.auth.uid])
+              && (
+                request.resource.data.parentIds.hasAll(resource.data.parentIds)
+                || (
+                  !request.resource.data.parentIds.hasAny([request.auth.uid])
+                  && resource.data.parentIds.size() == request.resource.data.parentIds.size() + 1
+                  && resource.data.parentIds.hasAll(request.resource.data.parentIds)
+                )
+              )
+            )
             || (
-              !request.resource.data.parentIds.hasAny([request.auth.uid])
-              && resource.data.parentIds.size() == request.resource.data.parentIds.size() + 1
-              && resource.data.parentIds.hasAll(request.resource.data.parentIds)
+              !resource.data.parentIds.hasAny([request.auth.uid])
+              && request.resource.data.parentIds.hasAny([request.auth.uid])
+              && request.resource.data.parentIds.hasAll(resource.data.parentIds)
+              && request.resource.data.parentIds.size() == resource.data.parentIds.size() + 1
+              && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['parentIds'])
             )
           );
     }

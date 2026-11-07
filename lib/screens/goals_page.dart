@@ -287,6 +287,18 @@ class _GoalsPageState extends State<GoalsPage>
     await _saveChildren(children);
   }
 
+  Future<Child> _linkChild(String childId) async {
+    await _childStorage.linkToCurrentParent(childId);
+    final child = await _childStorage.loadById(childId);
+    if (child == null) throw StateError('Could not load linked child.');
+    if (!mounted) return child;
+    if (!_children.any((item) => item.id == child.id)) {
+      setState(() => _children.add(child));
+      await _syncReminders();
+    }
+    return child;
+  }
+
   Future<void> _saveChildren(List<Child> children) async {
     await _childStorage.save(children);
     if (!mounted) return;
@@ -308,6 +320,7 @@ class _GoalsPageState extends State<GoalsPage>
         children: _children,
         goals: _goals,
         onSave: _saveChild,
+        onLink: _linkChild,
         onReorder: _saveChildren,
       ),
     ),

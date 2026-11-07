@@ -38,6 +38,66 @@ class ChildStorage {
     ];
   }
 
+  Future<Child?> loadById(String id) async {
+    if (id.isEmpty || id.contains('/')) return null;
+    final snapshot = await _children.doc(id).get();
+    if (!snapshot.exists) return null;
+    return Child.fromJson({...snapshot.data()!, 'id': snapshot.id});
+  }
+
+  Future<void> linkToCurrentParent(String childId) async {
+    if (childId.isEmpty || childId.contains('/')) {
+      throw const FormatException('Invalid child ID.');
+    }
+    final parentId = _parentId;
+    final batch = _db.batch();
+    batch.update(_children.doc(childId), {
+      'parentIds': FieldValue.arrayUnion([parentId]),
+    });
+    batch.set(
+      _db.collection('parents').doc(parentId),
+      {'childIds': FieldValue.arrayUnion([childId])},
+      SetOptions(merge: true),
+    );
+    await batch.commit();
+  }
+
+  /// Removes this parent from a child. If no other parents remain, deletes the
+  /// child and this parent's goals (tasks) associated with it.
+  Future<void> deleteForCurrentParent(String childId) async {
+    final parentId = _parentId;
+    final childRef = _children.doc(childId);
+    final parentRef = _db.collection('parents').doc(parentId);
+    final childSnapshot = await childRef.get();
+    if (!childSnapshot.exists) {
+      await parentRef.update({'childIds': FieldValue.arrayRemove([childId])});
+      return;
+    }
+
+    final parentIds = (childSnapshot.data()?['parentIds'] as List<dynamic>? ?? const [])
+        .whereType<String>()
+        .toSet()
+      ..remove(parentId);
+    final batch = _db.batch();
+    batch.set(parentRef, {'childIds': FieldValue.arrayRemove([childId])}, SetOptions(merge: true));
+    if (parentIds.isNotEmpty) {
+      batch.update(childRef, {'parentIds': parentIds.toList()});
+      await batch.commit();
+      return;
+    }
+
+    batch.delete(childRef);
+    final goals = await _db
+        .collection('goals')
+        .where('parentId', isEqualTo: parentId)
+        .where('childId', isEqualTo: childId)
+        .get();
+    for (final goal in goals.docs) {
+      batch.delete(goal.reference);
+    }
+    await batch.commit();
+  }
+
   Future<void> save(List<Child> children) async {
     final parentId = _parentId;
     final parentRef = _db.collection('parents').doc(parentId);
