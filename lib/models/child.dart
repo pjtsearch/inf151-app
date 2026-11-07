@@ -19,7 +19,7 @@ class Child {
   Map<String, Object?> toJson() => {
     'id': id,
     'name': name,
-    'photo': photoBytes == null ? null : base64Encode(photoBytes!),
+    'photoData': photoBytes == null ? null : base64Encode(photoBytes!),
     'color': color.name,
   };
 
@@ -27,8 +27,8 @@ class Child {
     id: json['id'] as String,
     name: json['name'] as String,
     color: ChildColor.fromJson(json['color']),
-    photoBytes: json['photo'] == null
+    photoBytes: json['photoData'] == null
         ? null
-        : base64Decode(json['photo'] as String),
+        : base64Decode(json['photoData'] as String),
   );
 }

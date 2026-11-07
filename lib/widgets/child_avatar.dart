@@ -19,9 +19,8 @@ class ChildAvatar extends StatelessWidget {
       radius: radius,
       backgroundColor: child.color.background,
       foregroundColor: child.color.foreground,
-      child: photo == null
-          ? placeholder
-          : ClipOval(
+      child: photo != null
+          ? ClipOval(
               child: Image.memory(
                 photo,
                 width: radius * 2,
@@ -29,7 +28,8 @@ class ChildAvatar extends StatelessWidget {
                 fit: BoxFit.cover,
                 errorBuilder: (_, _, _) => placeholder,
               ),
-            ),
+          )
+          : placeholder,
     );
   }
 }

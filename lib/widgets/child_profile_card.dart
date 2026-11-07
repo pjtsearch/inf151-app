@@ -58,7 +58,7 @@ class ChildProfileCard extends StatelessWidget {
                           child.photoBytes!,
                           fit: BoxFit.cover,
                           errorBuilder: (_, _, _) => placeholder,
-                        ),
+                        )
                 ),
               ),
               const SizedBox(height: 8),

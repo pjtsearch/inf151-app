@@ -1,12 +1,14 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:typed_data';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter_confetti/flutter_confetti.dart';
 import 'package:onboarding_overlay/onboarding_overlay.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/child.dart';
 import '../models/child_color.dart';
@@ -16,7 +18,6 @@ import 'child_form_page.dart';
 import 'manage_children_page.dart';
 import 'print_preview_page.dart';
 import 'scan_card_page.dart';
-import 'settings_page.dart';
 import 'account_page.dart';
 import '../services/child_storage.dart';
 import '../services/goal_storage.dart';
@@ -46,7 +47,6 @@ class _GoalsPageState extends State<GoalsPage>
   bool _scanning = false;
   final _childStorage = ChildStorage();
   late final _reminders = widget.reminderService ?? GoalReminderService();
-  static const _onboardingSeenKey = 'onboarding_seen';
   final _onboardingKey = GlobalKey<OnboardingState>();
   final _childrenFocus = FocusNode(debugLabel: 'Onboarding children');
   final _addGoalFocus = FocusNode(debugLabel: 'Onboarding add goal');
@@ -64,8 +64,10 @@ class _GoalsPageState extends State<GoalsPage>
   String? _selectedChildId;
   bool _showPast = false;
   bool _loading = true;
+  bool _loadFailed = false;
   GoalSort _sort = const GoalSort();
   bool _savingSort = false;
+  Uint8List? _accountPhotoBytes;
   Timer? _refreshTimer;
   late final TabController _statusController;
 
@@ -98,24 +100,49 @@ class _GoalsPageState extends State<GoalsPage>
   }
 
   Future<void> _loadGoals() async {
-    final savedChildren = await _childStorage.load();
-    final savedGoals = await _storage.load();
-    final savedSort = await _storage.loadSort();
-    final preferences = await SharedPreferences.getInstance();
-    final onboardingSeen = preferences.getBool(_onboardingSeenKey) ?? false;
-    if (!mounted) return;
-    setState(() {
-      _sort = savedSort;
-      _children
-        ..clear()
-        ..addAll(savedChildren);
-      _goals
-        ..clear()
-        ..addAll(savedGoals);
-      _loading = false;
-    });
-    if (!onboardingSeen) unawaited(_showOnboarding());
-    unawaited(_syncReminders());
+    if (mounted && !_loading) {
+      setState(() {
+        _loading = true;
+        _loadFailed = false;
+      });
+    }
+    try {
+      final savedChildren = await _childStorage.load();
+      final savedGoals = await _storage.load();
+      final savedSort = await _storage.loadSort();
+      final onboardingSeen = await _storage.loadOnboardingSeen();
+      final parentId = FirebaseAuth.instance.currentUser?.uid;
+      final profile = parentId == null
+          ? null
+          : (await FirebaseFirestore.instance
+                    .collection('parents')
+                    .doc(parentId)
+                    .get())
+                .data();
+      final encodedPhoto = profile?['photoData'] as String?;
+      if (!mounted) return;
+      setState(() {
+        _accountPhotoBytes = encodedPhoto == null
+            ? null
+            : base64Decode(encodedPhoto);
+        _sort = savedSort;
+        _children
+          ..clear()
+          ..addAll(savedChildren);
+        _goals
+          ..clear()
+          ..addAll(savedGoals);
+        _loading = false;
+      });
+      if (!onboardingSeen) unawaited(_showOnboarding());
+      unawaited(_syncReminders());
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _loadFailed = true;
+      });
+    }
   }
 
   @override
@@ -222,8 +249,7 @@ class _GoalsPageState extends State<GoalsPage>
 
   Future<void> _rememberOnboarding() async {
     try {
-      final preferences = await SharedPreferences.getInstance();
-      await preferences.setBool(_onboardingSeenKey, true);
+      await _storage.saveOnboardingSeen();
     } catch (error) {
       debugPrint('Could not remember onboarding: $error');
     }
@@ -338,20 +364,33 @@ class _GoalsPageState extends State<GoalsPage>
     await _editGoal(goal: copy, isCopy: true);
   }
 
-  Future<void> _openSettings() => Navigator.of(context).push<void>(
-    MaterialPageRoute(
-      builder: (_) => SettingsPage(
-        reminderService: _reminders,
-        onRemindersChanged: _syncReminders,
-      ),
-    ),
-  );
-
   Future<void> _openAccount() async {
     await Navigator.of(context).push<void>(
-      MaterialPageRoute(builder: (_) => const AccountPage()),
+      MaterialPageRoute(
+        builder: (_) => AccountPage(
+          reminderService: _reminders,
+          onRemindersChanged: _syncReminders,
+        ),
+      ),
     );
-    if (mounted) setState(() {});
+    if (mounted) await _refreshAccountPhoto();
+  }
+
+  Future<void> _refreshAccountPhoto() async {
+    final parentId = FirebaseAuth.instance.currentUser?.uid;
+    if (parentId == null) return;
+    final profile = (await FirebaseFirestore.instance
+            .collection('parents')
+            .doc(parentId)
+            .get())
+        .data();
+    final encodedPhoto = profile?['photoData'] as String?;
+    if (!mounted) return;
+    setState(() {
+      _accountPhotoBytes = encodedPhoto == null
+          ? null
+          : base64Decode(encodedPhoto);
+    });
   }
 
   Future<bool> _confirmDeleteGoal(Goal goal) async {
@@ -533,8 +572,12 @@ class _GoalsPageState extends State<GoalsPage>
     final photoUrl = FirebaseAuth.instance.currentUser?.photoURL;
     return CircleAvatar(
       radius: 17,
-      backgroundImage: photoUrl == null ? null : NetworkImage(photoUrl),
-      child: photoUrl == null
+      backgroundImage: _accountPhotoBytes != null
+          ? MemoryImage(_accountPhotoBytes!)
+          : photoUrl == null
+          ? null
+          : NetworkImage(photoUrl),
+      child: _accountPhotoBytes == null && photoUrl == null
           ? const Icon(Icons.account_circle_outlined, size: 25)
           : null,
     );
@@ -685,11 +728,6 @@ class _GoalsPageState extends State<GoalsPage>
                           ],
                         ),
                         IconButton(
-                          tooltip: 'Settings',
-                          onPressed: _loading ? null : _openSettings,
-                          icon: const Icon(Icons.settings_outlined),
-                        ),
-                        IconButton(
                           tooltip: 'Account',
                           onPressed: _loading ? null : _openAccount,
                           icon: _accountAvatar(),
@@ -755,6 +793,23 @@ class _GoalsPageState extends State<GoalsPage>
                     const SliverFillRemaining(
                       hasScrollBody: false,
                       child: Center(child: CircularProgressIndicator()),
+                    )
+                  else if (_loadFailed)
+                    SliverFillRemaining(
+                      hasScrollBody: false,
+                      child: Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Text('Could not load your Firebase data.'),
+                            const SizedBox(height: 8),
+                            TextButton(
+                              onPressed: _loadGoals,
+                              child: const Text('Try again'),
+                            ),
+                          ],
+                        ),
+                      ),
                     )
                   else if (goals.isEmpty)
                     SliverFillRemaining(

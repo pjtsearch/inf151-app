@@ -1,12 +1,25 @@
+import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_storage/firebase_storage.dart';
+
+import '../utils/firestore_photo.dart';
+import '../models/reminder_settings.dart';
+import '../services/goal_reminder_service.dart';
+import '../widgets/reminder_settings_editor.dart';
 
 class AccountPage extends StatefulWidget {
-  const AccountPage({super.key});
+  const AccountPage({
+    super.key,
+    required this.reminderService,
+    required this.onRemindersChanged,
+  });
+
+  final GoalReminderService reminderService;
+  final Future<void> Function() onRemindersChanged;
 
   @override
   State<AccountPage> createState() => _AccountPageState();
@@ -17,8 +30,11 @@ class _AccountPageState extends State<AccountPage> {
   final _picker = ImagePicker();
   final _auth = FirebaseAuth.instance;
   Uint8List? _photo;
+  ReminderSettings? _reminderSettings;
   bool _loading = true;
   bool _saving = false;
+  bool _savingReminders = false;
+  bool _reminderLoadFailed = false;
 
   @override
   void initState() {
@@ -34,22 +50,78 @@ class _AccountPageState extends State<AccountPage> {
 
   Future<void> _load() async {
     final user = _auth.currentUser;
+    final data = user == null
+        ? null
+        : (await FirebaseFirestore.instance
+                  .collection('parents')
+                  .doc(user.uid)
+                  .get())
+              .data();
+    final encodedPhoto = data?['photoData'] as String?;
     if (!mounted) return;
     setState(() {
       _nameController.text = user?.displayName ?? '';
+      _photo = encodedPhoto == null ? null : base64Decode(encodedPhoto);
       _loading = false;
     });
+    try {
+      final settings = await widget.reminderService.loadSettings();
+      if (mounted) setState(() => _reminderSettings = settings);
+    } catch (_) {
+      if (mounted) setState(() => _reminderLoadFailed = true);
+    }
+  }
+
+  Future<void> _loadReminderSettings() async {
+    setState(() => _reminderLoadFailed = false);
+    try {
+      final settings = await widget.reminderService.loadSettings();
+      if (mounted) setState(() => _reminderSettings = settings);
+    } catch (_) {
+      if (mounted) setState(() => _reminderLoadFailed = true);
+    }
+  }
+
+  Future<void> _saveReminderSettings(ReminderSettings settings) async {
+    if (_savingReminders) return;
+    final previous = _reminderSettings;
+    setState(() {
+      _reminderSettings = settings;
+      _savingReminders = true;
+    });
+    try {
+      await widget.reminderService.saveSettings(settings);
+      await widget.onRemindersChanged();
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _reminderSettings = previous);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Could not save reminder settings. Please try again.'),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _savingReminders = false);
+    }
   }
 
   Future<void> _pickPhoto() async {
     final image = await _picker.pickImage(
       source: ImageSource.gallery,
-      maxWidth: 900,
-      maxHeight: 900,
-      imageQuality: 85,
+      maxWidth: 256,
+      maxHeight: 256,
+      imageQuality: 70,
     );
     if (image == null) return;
     final bytes = await image.readAsBytes();
+    if (bytes.length > maxFirestorePhotoBytes) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Choose a photo smaller than 650 KB.')),
+        );
+      }
+      return;
+    }
     if (!mounted) return;
     setState(() => _photo = bytes);
   }
@@ -63,14 +135,10 @@ class _AccountPageState extends State<AccountPage> {
       await user.updateDisplayName(_nameController.text.trim());
       final photo = _photo;
       if (photo != null) {
-        final photoRef = FirebaseStorage.instance
-            .ref()
-            .child('profile_pictures/${user.uid}/profile.jpg');
-        await photoRef.putData(
-          photo,
-          SettableMetadata(contentType: 'image/jpeg'),
-        );
-        await user.updatePhotoURL(await photoRef.getDownloadURL());
+        await FirebaseFirestore.instance
+            .collection('parents')
+            .doc(user.uid)
+            .set({'photoData': base64Encode(photo)}, SetOptions(merge: true));
       }
       await user.reload();
       if (!mounted) return;
@@ -90,7 +158,7 @@ class _AccountPageState extends State<AccountPage> {
   Widget build(BuildContext context) {
     final profilePhotoUrl = _auth.currentUser?.photoURL;
     return Scaffold(
-      appBar: AppBar(title: const Text('Account')),
+      appBar: AppBar(title: const Text('Account & Settings')),
       body: SafeArea(
         child: _loading
             ? const Center(child: CircularProgressIndicator())
@@ -141,6 +209,28 @@ class _AccountPageState extends State<AccountPage> {
                         onPressed: _saving ? null : _save,
                         child: Text(_saving ? 'Saving…' : 'Save changes'),
                       ),
+                      const SizedBox(height: 32),
+                      const Divider(),
+                      const SizedBox(height: 12),
+                      Text('Reminders', style: Theme.of(context).textTheme.titleLarge),
+                      const SizedBox(height: 8),
+                      if (_reminderSettings case final settings?)
+                        ReminderSettingsEditor(
+                          value: settings,
+                          service: widget.reminderService,
+                          enabled: !_savingReminders && !_saving,
+                          onChanged: _saveReminderSettings,
+                        )
+                      else if (_reminderLoadFailed)
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: TextButton(
+                            onPressed: _loadReminderSettings,
+                            child: const Text('Could not load reminder settings. Try again'),
+                          ),
+                        )
+                      else
+                        const Center(child: CircularProgressIndicator()),
                       const SizedBox(height: 32),
                       const Divider(),
                       const SizedBox(height: 12),

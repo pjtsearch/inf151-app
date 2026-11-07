@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../models/child.dart';
 import '../models/child_color.dart';
+import '../utils/firestore_photo.dart';
 import '../widgets/child_avatar.dart';
 
 class ChildFormPage extends StatefulWidget {
@@ -44,16 +45,18 @@ class _ChildFormPageState extends State<ChildFormPage> {
     try {
       final photo = await ImagePicker().pickImage(
         source: ImageSource.gallery,
-        maxWidth: 512,
-        maxHeight: 512,
-        imageQuality: 80,
+        maxWidth: 256,
+        maxHeight: 256,
+        imageQuality: 70,
         requestFullMetadata: false,
       );
       if (photo == null) return;
-      if (await photo.length() > 2 * 1024 * 1024) {
-        throw const FormatException('Please choose a photo smaller than 2 MB.');
-      }
       final bytes = await photo.readAsBytes();
+      if (bytes.length > maxFirestorePhotoBytes) {
+        throw const FormatException(
+          'Please choose a photo smaller than 650 KB.',
+        );
+      }
       if (mounted) setState(() => _photoBytes = bytes);
     } catch (error) {
       if (!mounted) return;

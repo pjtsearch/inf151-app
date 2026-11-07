@@ -1,9 +1,8 @@
-import 'dart:convert';
-
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/data/latest_all.dart' as tzdata;
 import 'package:timezone/timezone.dart' as tz;
 
@@ -13,8 +12,6 @@ import '../models/reminder_settings.dart';
 import 'goal_reminder_schedule.dart';
 
 class GoalReminderService {
-  static const _scheduledKey = 'goal_reminders_scheduled';
-  static const _settingsKey = 'goal_reminder_settings';
   static const _payloadPrefix = 'goal-reminder:';
   final _notifications = FlutterLocalNotificationsPlugin();
   Future<void>? _initialization;
@@ -26,23 +23,22 @@ class GoalReminderService {
           defaultTargetPlatform == TargetPlatform.iOS);
 
   Future<ReminderSettings> loadSettings() async {
-    final preferences = await SharedPreferences.getInstance();
-    final data = preferences.getString(_settingsKey);
-    if (data == null) return const ReminderSettings();
-    try {
-      return ReminderSettings.fromJson(jsonDecode(data));
-    } on FormatException {
-      return const ReminderSettings();
-    }
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) throw StateError('A parent must be signed in.');
+    final snapshot = await FirebaseFirestore.instance
+        .collection('parents')
+        .doc(user.uid)
+        .get();
+    return ReminderSettings.fromJson(snapshot.data()?['reminderSettings']);
   }
 
   Future<void> saveSettings(ReminderSettings settings) async {
-    final preferences = await SharedPreferences.getInstance();
-    final saved = await preferences.setString(
-      _settingsKey,
-      jsonEncode(settings.toJson()),
-    );
-    if (!saved) throw StateError('Could not save reminder settings.');
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) throw StateError('A parent must be signed in.');
+    await FirebaseFirestore.instance
+        .collection('parents')
+        .doc(user.uid)
+        .set({'reminderSettings': settings.toJson()}, SetOptions(merge: true));
   }
 
   Future<void> _initialize() async {
@@ -102,22 +98,15 @@ class GoalReminderService {
 
   Future<void> _sync(List<Goal> goals, Map<String, String> childNames) async {
     if (!isSupported) return;
-    final preferences = await SharedPreferences.getInstance();
     final settings = await loadSettings();
     final enabled = settings.enabled;
-    if (!enabled && preferences.getBool(_scheduledKey) != true) return;
     await _initialize();
-    // Remember that cleanup is needed even if scheduling is interrupted.
-    await preferences.setBool(_scheduledKey, true);
     for (final pending in await _notifications.pendingNotificationRequests()) {
       if (pending.payload?.startsWith(_payloadPrefix) ?? false) {
         await _notifications.cancel(id: pending.id);
       }
     }
-    if (!enabled) {
-      await preferences.setBool(_scheduledKey, false);
-      return;
-    }
+    if (!enabled) return;
     final timezone = await FlutterTimezone.getLocalTimezone();
     final location = tz.getLocation(timezone.identifier);
     final planned = planGoalReminders(
@@ -146,6 +135,5 @@ class GoalReminderService {
         payload: '$_payloadPrefix${reminder.goal.id}',
       );
     }
-    await preferences.setBool(_scheduledKey, planned.isNotEmpty);
   }
 }
