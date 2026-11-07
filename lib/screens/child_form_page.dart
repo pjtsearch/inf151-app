@@ -7,6 +7,7 @@ import '../models/child.dart';
 import '../models/child_color.dart';
 import '../utils/firestore_photo.dart';
 import '../widgets/child_avatar.dart';
+import '../widgets/child_id_qr_code.dart';
 
 class ChildFormPage extends StatefulWidget {
   const ChildFormPage({super.key, required this.onSave, this.child});
@@ -150,6 +151,28 @@ class _ChildFormPageState extends State<ChildFormPage> {
                       ),
                     ),
                   const SizedBox(height: 24),
+                  if (widget.child != null) ...[
+                    const Divider(),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Child QR code',
+                      style: Theme.of(context).textTheme.titleMedium,
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Share this QR code to give access to this child.',
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 12),
+                    Center(child: ChildIdQrCode(childId: widget.child!.id)),
+                    const SizedBox(height: 8),
+                    SelectableText(
+                      widget.child!.id,
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 20),
+                  ],
                   TextFormField(
                     controller: _nameController,
                     enabled: !_saving,
