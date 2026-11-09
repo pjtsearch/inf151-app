@@ -66,6 +66,18 @@ String _monthLabel(DateTime startDate, int offset) {
 
 int punchCountFor(Goal goal) => goal.totalTasks;
 
+enum PunchCardDesign {
+  classic('Classic stars', punchCardBackgroundSvg),
+  ocean('Ocean waves', oceanPunchCardBackgroundSvg),
+  sunset('Sunset hills', sunsetPunchCardBackgroundSvg),
+  inkSaver('Ink saver', inkSaverPunchCardBackgroundSvg);
+
+  const PunchCardDesign(this.label, this.backgroundSvg);
+
+  final String label;
+  final String backgroundSvg;
+}
+
 class PunchCardPrintJob {
   const PunchCardPrintJob({required this.goal, this.childName});
 
@@ -77,13 +89,17 @@ Future<Uint8List> buildPunchCardPdf(
   Goal goal, {
   String? childName,
   PdfPageFormat pageFormat = PdfPageFormat.letter,
-}) => buildPunchCardsPdf([
-  PunchCardPrintJob(goal: goal, childName: childName),
-], pageFormat: pageFormat);
+  PunchCardDesign design = PunchCardDesign.classic,
+}) => buildPunchCardsPdf(
+  [PunchCardPrintJob(goal: goal, childName: childName)],
+  pageFormat: pageFormat,
+  design: design,
+);
 
 Future<Uint8List> buildPunchCardsPdf(
   List<PunchCardPrintJob> jobs, {
   PdfPageFormat pageFormat = PdfPageFormat.letter,
+  PunchCardDesign design = PunchCardDesign.classic,
 }) async {
   final cards = <pw.Widget>[];
   const holesPerCard = punchCardColumnsPerRow * punchCardMaxRows;
@@ -92,7 +108,14 @@ Future<Uint8List> buildPunchCardsPdf(
     final cardCount = (totalHoles / holesPerCard).ceil();
     for (var cardIndex = 0; cardIndex < cardCount; cardIndex++) {
       cards.add(
-        _buildCard(job.goal, totalHoles, cardIndex, cardCount, job.childName),
+        _buildCard(
+          job.goal,
+          totalHoles,
+          cardIndex,
+          cardCount,
+          job.childName,
+          design,
+        ),
       );
     }
   }
@@ -136,6 +159,7 @@ pw.Widget _buildCard(
   int cardIndex,
   int cardCount,
   String? childName,
+  PunchCardDesign design,
 ) {
   final holesPerCard = punchCardColumnsPerRow * punchCardMaxRows;
   final firstHole = cardIndex * holesPerCard;
@@ -147,7 +171,7 @@ pw.Widget _buildCard(
     child: pw.Stack(
       fit: pw.StackFit.expand,
       children: [
-        pw.SvgImage(svg: punchCardBackgroundSvg, fit: pw.BoxFit.fill),
+        pw.SvgImage(svg: design.backgroundSvg, fit: pw.BoxFit.fill),
         pw.Padding(
           padding: const pw.EdgeInsets.fromLTRB(
             4 * PdfPageFormat.mm,

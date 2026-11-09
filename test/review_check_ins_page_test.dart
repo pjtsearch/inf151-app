@@ -57,6 +57,43 @@ Future<void> _openReview(
 }
 
 void main() {
+  testWidgets('corrects a scan before saving the updated goal', (tester) async {
+    Goal? result;
+    await _openReview(
+      tester,
+      progress: _scan(detected: 13),
+      onResult: (goal) {
+        result = goal;
+      },
+    );
+
+    final increase = find.byTooltip('Increase check-in count');
+    final decrease = find.byTooltip('Decrease check-in count');
+    await tester.tap(increase);
+    await tester.pumpAndSettle();
+    expect(find.text('Goal complete!'), findsOneWidget);
+    expect(
+      tester
+          .widget<IconButton>(find.widgetWithIcon(IconButton, Icons.add))
+          .onPressed,
+      isNull,
+    );
+    expect(result, isNull);
+
+    await tester.tap(decrease);
+    await tester.pumpAndSettle();
+    expect(find.text('Goal complete!'), findsNothing);
+    expect(find.text('5 new check-ins'), findsOneWidget);
+
+    await tester.tap(increase);
+    await tester.pumpAndSettle();
+    final confirm = find.text('Confirm & Save Progress');
+    await tester.scrollUntilVisible(confirm, 150);
+    await tester.tap(confirm);
+    await tester.pumpAndSettle();
+    expect(result?.completedTasks, 14);
+  });
+
   for (final reward in [
     const FreeTextReward('A trip to the park'),
     const FreeTextReward('A wooden puzzle'),

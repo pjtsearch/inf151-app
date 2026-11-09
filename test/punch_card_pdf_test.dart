@@ -53,6 +53,19 @@ int _whiteHoleInteriors(Uint8List bytes) {
 
 void main() {
   test(
+    'all designs produce distinct art with the same white punch targets',
+    () async {
+      final rendered = <String>{};
+      for (final design in PunchCardDesign.values) {
+        final bytes = await buildPunchCardPdf(_goal(tasks: 15), design: design);
+        expect(_printedHoles(bytes), 15, reason: design.label);
+        expect(_whiteHoleInteriors(bytes), 15, reason: design.label);
+        expect(rendered.add(_pdfContents(bytes)), isTrue, reason: design.label);
+      }
+    },
+  );
+
+  test(
     'different goals share a sheet and retain their child names and punches',
     () async {
       final bytes = await buildPunchCardsPdf([

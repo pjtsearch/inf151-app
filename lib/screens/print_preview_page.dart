@@ -30,6 +30,7 @@ class PrintPreviewPage extends StatefulWidget {
 
 class _PrintPreviewPageState extends State<PrintPreviewPage> {
   _PaperSize _paperSize = _PaperSize.letter;
+  PunchCardDesign _design = PunchCardDesign.classic;
   late Future<Uint8List> _document;
   bool _printing = false;
 
@@ -39,8 +40,11 @@ class _PrintPreviewPageState extends State<PrintPreviewPage> {
     _document = _buildDocument();
   }
 
-  Future<Uint8List> _buildDocument() =>
-      buildPunchCardsPdf(widget.jobs, pageFormat: _paperSize.format);
+  Future<Uint8List> _buildDocument() => buildPunchCardsPdf(
+    widget.jobs,
+    pageFormat: _paperSize.format,
+    design: _design,
+  );
 
   Future<void> _print(Uint8List bytes) async {
     if (_printing) return;
@@ -86,7 +90,7 @@ class _PrintPreviewPageState extends State<PrintPreviewPage> {
     }
     final bytes = snapshot.requireData;
     return PdfPreviewCustom(
-      key: ValueKey(_paperSize),
+      key: ValueKey((_paperSize, _design)),
       pageFormat: _paperSize.format,
       build: (_) => bytes,
       maxPageWidth: 700,
@@ -128,6 +132,30 @@ class _PrintPreviewPageState extends State<PrintPreviewPage> {
                         if (size == null || size == _paperSize) return;
                         setState(() {
                           _paperSize = size;
+                          _document = _buildDocument();
+                        });
+                      },
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              child: DropdownButtonFormField<PunchCardDesign>(
+                initialValue: _design,
+                isExpanded: true,
+                decoration: const InputDecoration(
+                  labelText: 'Card design',
+                  border: OutlineInputBorder(),
+                ),
+                items: [
+                  for (final design in PunchCardDesign.values)
+                    DropdownMenuItem(value: design, child: Text(design.label)),
+                ],
+                onChanged: _printing
+                    ? null
+                    : (design) {
+                        if (design == null || design == _design) return;
+                        setState(() {
+                          _design = design;
                           _document = _buildDocument();
                         });
                       },

@@ -1,3 +1,28 @@
+const oceanPunchCardBackgroundSvg = '''
+<svg xmlns="http://www.w3.org/2000/svg" width="933" height="589" viewBox="0 0 933 589">
+  <rect width="933" height="589" rx="20" fill="#174978"/>
+  <rect x="28" y="28" width="877" height="533" rx="16" fill="#E9F7FC"/>
+  <path d="M28 398 Q150 333 310 408 T600 414 T905 380 V545 Q905 561 889 561 H44 Q28 561 28 545 Z" fill="#B9E5F3"/>
+  <path d="M28 475 Q153 405 311 481 T600 487 T905 454 V545 Q905 561 889 561 H44 Q28 561 28 545 Z" fill="#98D0E6"/>
+</svg>
+''';
+
+const sunsetPunchCardBackgroundSvg = '''
+<svg xmlns="http://www.w3.org/2000/svg" width="933" height="589" viewBox="0 0 933 589">
+  <rect width="933" height="589" rx="20" fill="#9D432B"/>
+  <rect x="28" y="28" width="877" height="533" rx="16" fill="#FFF4DF"/>
+  <circle cx="730" cy="347" r="115" fill="#FFD381"/>
+  <path d="M28 561 V456 L240 361 L427 469 L608 404 L905 500 V561 Z" fill="#FFD9B5"/>
+  <path d="M28 561 V519 L227 455 L432 528 L685 455 L905 530 V561 Z" fill="#FFC1A9"/>
+</svg>
+''';
+
+const inkSaverPunchCardBackgroundSvg = '''
+<svg xmlns="http://www.w3.org/2000/svg" width="933" height="589" viewBox="0 0 933 589">
+  <rect x="3" y="3" width="927" height="583" rx="17" fill="#FFFFFF" stroke="#444444" stroke-width="6"/>
+</svg>
+''';
+
 const _starPath =
     'M798 328 L846 383 L916 361 L883 432 L922 492 '
     'L849 475 L805 548 L794 470 L718 440 L794 402 Z';

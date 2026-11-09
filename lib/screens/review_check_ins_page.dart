@@ -4,16 +4,35 @@ import '../models/child.dart';
 import '../models/punch_card_progress.dart';
 import '../widgets/child_avatar.dart';
 
-class ReviewCheckInsPage extends StatelessWidget {
+class ReviewCheckInsPage extends StatefulWidget {
   const ReviewCheckInsPage({super.key, required this.progress, this.child});
 
   final PunchCardProgress progress;
   final Child? child;
 
   @override
+  State<ReviewCheckInsPage> createState() => _ReviewCheckInsPageState();
+}
+
+class _ReviewCheckInsPageState extends State<ReviewCheckInsPage> {
+  late PunchCardProgress _progress = widget.progress;
+
+  void _adjustCount(int change) {
+    setState(() {
+      _progress = PunchCardProgress(
+        goal: _progress.goal,
+        cardStart: _progress.cardStart,
+        cardEnd: _progress.cardEnd,
+        detectedCount: _progress.detectedCount + change,
+      );
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
+    final progress = _progress;
     final goal = progress.goal;
     final updatedGoal = progress.updatedGoal;
     final isComplete = updatedGoal.hasCompletedAllTasks;
@@ -21,7 +40,7 @@ class ReviewCheckInsPage extends StatelessWidget {
         ? colors.onPrimaryContainer
         : colors.onSecondaryContainer;
     final reward = goal.reward.label.trim();
-    final matchedChild = child;
+    final matchedChild = widget.child;
     final progressLabel = matchedChild == null
         ? 'this progress'
         : '${matchedChild.name}’s progress';
@@ -45,7 +64,7 @@ class ReviewCheckInsPage extends StatelessWidget {
                 Text('Review check-ins', style: theme.textTheme.headlineMedium),
                 const SizedBox(height: 8),
                 Text(
-                  'Confirm what’s on the physical card.',
+                  'Use + or − to correct the count on the physical card.',
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: colors.onSurfaceVariant,
                   ),
@@ -103,9 +122,17 @@ class ReviewCheckInsPage extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
                 _CountRow(
-                  label: 'Detected on this card',
+                  label: progress.detectedCount == widget.progress.detectedCount
+                      ? 'Detected on this card'
+                      : 'Adjusted count on this card',
                   count: progress.detectedCount,
                   total: progress.holeCount,
+                  onDecrease: progress.detectedCount > 0
+                      ? () => _adjustCount(-1)
+                      : null,
+                  onIncrease: progress.detectedCount < progress.holeCount
+                      ? () => _adjustCount(1)
+                      : null,
                 ),
                 const SizedBox(height: 16),
                 Container(
@@ -236,11 +263,15 @@ class _CountRow extends StatelessWidget {
     required this.label,
     required this.count,
     required this.total,
+    this.onDecrease,
+    this.onIncrease,
   });
 
   final String label;
   final int count;
   final int total;
+  final VoidCallback? onDecrease;
+  final VoidCallback? onIncrease;
 
   @override
   Widget build(BuildContext context) {
@@ -251,12 +282,31 @@ class _CountRow extends StatelessWidget {
         Text(label, style: theme.textTheme.titleSmall),
         const SizedBox(height: 6),
         Container(
-          padding: const EdgeInsets.all(14),
+          padding: EdgeInsets.symmetric(
+            horizontal: 14,
+            vertical: onDecrease == null && onIncrease == null ? 14 : 0,
+          ),
           decoration: BoxDecoration(
             color: theme.colorScheme.surfaceContainerLowest,
             borderRadius: BorderRadius.circular(14),
           ),
-          child: Text('$count / $total check-ins'),
+          child: Row(
+            children: [
+              Expanded(child: Text('$count / $total check-ins')),
+              if (onDecrease != null || onIncrease != null) ...[
+                IconButton(
+                  tooltip: 'Decrease check-in count',
+                  onPressed: onDecrease,
+                  icon: const Icon(Icons.remove),
+                ),
+                IconButton(
+                  tooltip: 'Increase check-in count',
+                  onPressed: onIncrease,
+                  icon: const Icon(Icons.add),
+                ),
+              ],
+            ],
+          ),
         ),
       ],
     );
