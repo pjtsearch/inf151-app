@@ -177,7 +177,7 @@ class _GoalFormSheetState extends State<GoalFormSheet> {
                   const SizedBox(height: 16),
                   TextFormField(
                     controller: _titleController,
-                    autofocus: true,
+                    autofocus: false,
                     textCapitalization: TextCapitalization.sentences,
                     decoration: const InputDecoration(
                       labelText: 'Goal',
