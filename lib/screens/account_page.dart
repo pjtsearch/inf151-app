@@ -10,6 +10,7 @@ import '../utils/firestore_photo.dart';
 import '../models/reminder_settings.dart';
 import '../services/goal_reminder_service.dart';
 import '../widgets/reminder_settings_editor.dart';
+import 'tutorials_page.dart';
 
 class AccountPage extends StatefulWidget {
   const AccountPage({
@@ -245,6 +246,26 @@ class _AccountPageState extends State<AccountPage> {
                         },
                         icon: const Icon(Icons.logout),
                         label: const Text('Sign out'),
+                      ),
+                      const SizedBox(height: 32),
+                      const Divider(),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Help',
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                      const SizedBox(height: 8),
+
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: const Icon(Icons.help_outline),
+                        title: const Text('Tutorials'),
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: () => Navigator.of(context).push<void>(
+                          MaterialPageRoute(
+                            builder: (_) => const TutorialsPage(),
+                          ),
+                        ),
                       ),
                     ],
                   ),
