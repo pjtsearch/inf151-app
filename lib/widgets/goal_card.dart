@@ -21,6 +21,7 @@ class GoalCard extends StatelessWidget {
     this.showChildBadge = true,
     this.onTap,
     this.onLongPress,
+    this.onChildTap,
   });
 
   final Goal goal;
@@ -36,6 +37,7 @@ class GoalCard extends StatelessWidget {
   final bool showChildBadge;
   final VoidCallback? onTap;
   final VoidCallback? onLongPress;
+  final VoidCallback? onChildTap;
 
   @override
   Widget build(BuildContext context) {
@@ -79,24 +81,28 @@ class GoalCard extends StatelessWidget {
                               color: child!.color.background,
                               borderRadius: BorderRadius.circular(16),
                             ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                ChildAvatar(child: child!, radius: 12),
-                                const SizedBox(width: 6),
-                                Flexible(
-                                  child: Text(
-                                    child!.name,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: theme.textTheme.labelMedium
-                                        ?.copyWith(
-                                          color: child!.color.foreground,
-                                          fontWeight: FontWeight.w600,
-                                        ),
+                            child: InkWell(
+                              onTap: onChildTap,
+                              borderRadius: BorderRadius.circular(16),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  ChildAvatar(child: child!, radius: 12),
+                                  const SizedBox(width: 6),
+                                  Flexible(
+                                    child: Text(
+                                      child!.name,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: theme.textTheme.labelMedium
+                                          ?.copyWith(
+                                            color: child!.color.foreground,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                    ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
                           ),
                         ),

@@ -261,6 +261,14 @@ class _GoalsPageState extends State<GoalsPage>
     await _saveChildren(children);
   }
 
+  Future<void> _editChild(Child child) async {
+    await Navigator.of(context).push<Child>(
+      MaterialPageRoute(
+        builder: (_) => ChildFormPage(child: child, onSave: _saveChild),
+      ),
+    );
+  }
+
   Future<Child> _linkChild(String childId) async {
     await _childStorage.linkToCurrentParent(childId);
     final child = await _childStorage.loadById(childId);
@@ -902,6 +910,19 @@ class _GoalsPageState extends State<GoalsPage>
                                       ? () => _toggleGoalSelection(goal)
                                       : null,
                                   onLongPress: () => _toggleGoalSelection(goal),
+                                  onChildTap: _selecting
+                                      ? null
+                                      : () {
+                                          final child = children
+                                              .where(
+                                                (child) =>
+                                                    child.id == goal.childId,
+                                              )
+                                              .firstOrNull;
+                                          if (child != null) {
+                                            _editChild(child);
+                                          }
+                                        },
                                   onCopy: () => _copyGoal(goal),
                                   onDelete: () => _deleteGoal(goal),
                                   onPrint: () => _printPunchCards([goal]),
