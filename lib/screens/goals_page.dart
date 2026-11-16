@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:typed_data';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
@@ -55,7 +54,8 @@ class _GoalsPageState extends State<GoalsPage>
   final _scrollController = ScrollController();
   bool _onboardingVisible = false;
   bool _startingOnboarding = false;
-  bool _resettingExamples = false;
+  // Preview data is only read by build; persistence and reminders use the real lists.
+  ({List<Child> children, List<Goal> goals})? _onboardingPreview;
   final List<Child> _children = [];
   final List<Goal> _goals = [];
   final Set<String> _selectedGoalIds = {};
@@ -171,8 +171,23 @@ class _GoalsPageState extends State<GoalsPage>
     if (_loading || _selecting || _startingOnboarding || _onboardingVisible) {
       return;
     }
+    if (!mounted || ModalRoute.of(context)?.isCurrent != true) return;
     _startingOnboarding = true;
+    const children = [
+      Child(id: 'example-alex', name: 'Alex', color: ChildColor.blue),
+      Child(id: 'example-sam', name: 'Sam', color: ChildColor.purple),
+    ];
+    setState(() {
+      _onboardingPreview = (
+        children: children,
+        goals: buildExampleGoals(children, DateTime.now()),
+      );
+      _onboardingVisible = true;
+    });
+    _statusController.index = 0;
     try {
+      // Build the preview before measuring the overlay's focus targets.
+      await WidgetsBinding.instance.endOfFrame;
       if (_scrollController.hasClients && _scrollController.offset != 0) {
         await _scrollController.animateTo(
           0,
@@ -180,69 +195,28 @@ class _GoalsPageState extends State<GoalsPage>
           curve: Curves.easeOut,
         );
       }
-      await WidgetsBinding.instance.endOfFrame;
-      if (!mounted || ModalRoute.of(context)?.isCurrent != true) return;
-      setState(() => _onboardingVisible = true);
+      if (!mounted || !_onboardingVisible) return;
+      if (ModalRoute.of(context)?.isCurrent != true) {
+        _clearOnboardingPreview();
+        return;
+      }
       _onboardingKey.currentState?.show();
     } finally {
       _startingOnboarding = false;
     }
   }
 
-  Future<void> _restartOnboardingWithExamples() async {
-    if (_loading ||
-        _resettingExamples ||
-        _startingOnboarding ||
-        _onboardingVisible) {
-      return;
-    }
-    setState(() => _resettingExamples = true);
-    try {
-      const children = [
-        Child(id: 'example-alex', name: 'Alex', color: ChildColor.blue),
-        Child(id: 'example-sam', name: 'Sam', color: ChildColor.purple),
-      ];
-      final examples = buildExampleGoals(children, DateTime.now());
-      final previousChildren = List<Child>.of(_children);
-      await _childStorage.save(children);
-      try {
-        await _storage.save(examples);
-      } catch (_) {
-        await _childStorage.save(previousChildren);
-        rethrow;
-      }
-      if (!mounted) return;
-      _statusController.animateTo(0);
-      setState(() {
-        _children
-          ..clear()
-          ..addAll(children);
-        _goals
-          ..clear()
-          ..addAll(examples);
-        _selectedGoalIds.clear();
-        _selectedChildId = null;
-        _showPast = false;
-      });
-      await _syncReminders();
-    } catch (_) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Could not reset example children and goals. Please try again.',
-          ),
-        ),
-      );
-      return;
-    } finally {
-      if (mounted) setState(() => _resettingExamples = false);
-    }
-    if (mounted) await _showOnboarding();
+  void _clearOnboardingPreview() {
+    setState(() {
+      _onboardingVisible = false;
+      _onboardingPreview = null;
+    });
+    _statusController.index = _showPast ? 1 : 0;
   }
 
   void _finishOnboarding() {
-    setState(() => _onboardingVisible = false);
+    if (!mounted || !_onboardingVisible) return;
+    _clearOnboardingPreview();
     FocusManager.instance.primaryFocus?.unfocus();
     unawaited(_rememberOnboarding());
   }
@@ -398,6 +372,7 @@ class _GoalsPageState extends State<GoalsPage>
   }
 
   Future<void> _copyGoal(Goal goal) async {
+    if (_onboardingVisible) return;
     final copy = goal.copyWith(
       id: DateTime.now().microsecondsSinceEpoch.toString(),
       startDate: today(),
@@ -423,11 +398,12 @@ class _GoalsPageState extends State<GoalsPage>
   Future<void> _refreshAccountPhoto() async {
     final parentId = FirebaseAuth.instance.currentUser?.uid;
     if (parentId == null) return;
-    final profile = (await FirebaseFirestore.instance
-            .collection('parents')
-            .doc(parentId)
-            .get())
-        .data();
+    final profile =
+        (await FirebaseFirestore.instance
+                .collection('parents')
+                .doc(parentId)
+                .get())
+            .data();
     final encodedPhoto = profile?['photoData'] as String?;
     if (!mounted) return;
     setState(() {
@@ -438,6 +414,7 @@ class _GoalsPageState extends State<GoalsPage>
   }
 
   Future<bool> _confirmDeleteGoal(Goal goal) async {
+    if (_onboardingVisible) return false;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -474,7 +451,7 @@ class _GoalsPageState extends State<GoalsPage>
   }
 
   void _toggleGoalSelection(Goal goal) {
-    if (_deletingGoals) return;
+    if (_deletingGoals || _onboardingVisible) return;
     setState(() {
       if (!_selectedGoalIds.add(goal.id)) _selectedGoalIds.remove(goal.id);
     });
@@ -536,16 +513,18 @@ class _GoalsPageState extends State<GoalsPage>
   Future<void> _printSelectedGoals() {
     final selected =
         _goals.where((goal) => _selectedGoalIds.contains(goal.id)).toList()
-          ..sort((a, b) => _sort.compare(
-            a,
-            b,
-            currentParentId: FirebaseAuth.instance.currentUser?.uid,
-          ));
+          ..sort(
+            (a, b) => _sort.compare(
+              a,
+              b,
+              currentParentId: FirebaseAuth.instance.currentUser?.uid,
+            ),
+          );
     return _printPunchCards(selected);
   }
 
   Future<void> _printPunchCards(List<Goal> goals) async {
-    if (goals.isEmpty) return;
+    if (goals.isEmpty || _onboardingVisible) return;
     final jobs = [
       for (final goal in goals)
         PunchCardPrintJob(
@@ -635,20 +614,25 @@ class _GoalsPageState extends State<GoalsPage>
   @override
   Widget build(BuildContext context) {
     final now = DateTime.now();
+    final preview = _onboardingPreview;
+    final children = preview?.children ?? _children;
+    final showPast = preview == null && _showPast;
+    final selectedChildId = preview == null ? _selectedChildId : null;
     final goals =
-        _goals
+        (preview?.goals ?? _goals)
             .where(
               (goal) =>
-                  goal.isPastOn(now) == _showPast &&
-                  (_selectedChildId == null ||
-                      goal.childId == _selectedChildId),
+                  goal.isPastOn(now) == showPast &&
+                  (selectedChildId == null || goal.childId == selectedChildId),
             )
             .toList()
-          ..sort((a, b) => _sort.compare(
-            a,
-            b,
-            currentParentId: FirebaseAuth.instance.currentUser?.uid,
-          ));
+          ..sort(
+            (a, b) => _sort.compare(
+              a,
+              b,
+              currentParentId: FirebaseAuth.instance.currentUser?.uid,
+            ),
+          );
 
     return Onboarding(
       key: _onboardingKey,
@@ -670,322 +654,339 @@ class _GoalsPageState extends State<GoalsPage>
             _clearSelection();
           }
         },
-        child: Scaffold(
-          body: Stack(
-            fit: StackFit.expand,
-            children: [
-              NestedScrollView(
-                controller: _scrollController,
-                headerSliverBuilder: (context, innerBoxIsScrolled) => [
-                  SliverAppBar.large(
-                    leading: _selecting
-                        ? IconButton(
-                            tooltip: 'Cancel selection',
-                            onPressed: _deletingGoals ? null : _clearSelection,
-                            icon: const Icon(Icons.close),
-                          )
-                        : null,
-                    title: _selecting
-                        ? Text(
-                            '${_selectedGoalIds.length} selected',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          )
-                        : Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Image.asset(
-                                'assets/branding/holepunch.png',
-                                width: 32,
-                                height: 32,
-                                excludeFromSemantics: true,
-                              ),
-                              const SizedBox(width: 8),
-                              const Flexible(
+        child: AbsorbPointer(
+          absorbing: _onboardingVisible,
+          child: Scaffold(
+            body: Stack(
+              fit: StackFit.expand,
+              children: [
+                NestedScrollView(
+                  controller: _scrollController,
+                  headerSliverBuilder: (context, innerBoxIsScrolled) => [
+                    SliverAppBar.large(
+                      leading: _selecting
+                          ? IconButton(
+                              tooltip: 'Cancel selection',
+                              onPressed: _deletingGoals
+                                  ? null
+                                  : _clearSelection,
+                              icon: const Icon(Icons.close),
+                            )
+                          : null,
+                      title: _selecting
+                          ? Text(
+                              '${_selectedGoalIds.length} selected',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            )
+                          : Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Image.asset(
+                                  'assets/branding/holepunch.png',
+                                  width: 32,
+                                  height: 32,
+                                  excludeFromSemantics: true,
+                                ),
+                                const SizedBox(width: 8),
+                                const Flexible(
+                                  child: Text(
+                                    'GoalPunch',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                      pinned: true,
+                      actions: [
+                        if (_selecting) ...[
+                          IconButton(
+                            tooltip: 'Select all visible goals',
+                            onPressed: goals.isEmpty || _deletingGoals
+                                ? null
+                                : () => setState(() {
+                                    _selectedGoalIds.addAll(
+                                      goals.map((goal) => goal.id),
+                                    );
+                                  }),
+                            icon: const Icon(Icons.select_all),
+                          ),
+                          IconButton(
+                            tooltip: 'Delete selected goals',
+                            onPressed: _deletingGoals
+                                ? null
+                                : _deleteSelectedGoals,
+                            icon: const Icon(Icons.delete_outline),
+                          ),
+                        ] else ...[
+                          if (kIsWeb)
+                            IconButton(
+                              tooltip: 'Reload tasks',
+                              onPressed: _loading ? null : _loadGoals,
+                              icon: const Icon(Icons.refresh),
+                            ),
+                          IconButton(
+                            tooltip: 'Show tutorial',
+                            onPressed:
+                                _loading ||
+                                    _startingOnboarding ||
+                                    _onboardingVisible
+                                ? null
+                                : _showOnboarding,
+                            icon: const Icon(Icons.help_outline),
+                          ),
+                          IconButton(
+                            focusNode: _childrenFocus,
+                            tooltip: 'Manage children',
+                            onPressed: _loading ? null : _manageChildren,
+                            icon: const Icon(Icons.people_outline),
+                          ),
+                          PopupMenuButton<GoalSort>(
+                            tooltip: 'Sort goals',
+                            enabled: !_loading && !_savingSort,
+                            icon: const Icon(Icons.sort),
+                            onSelected: _setSort,
+                            itemBuilder: (_) => [
+                              for (final by in GoalSortBy.values)
+                                CheckedPopupMenuItem(
+                                  value: GoalSort(
+                                    by: by,
+                                    descending: _sort.descending,
+                                  ),
+                                  checked: _sort.by == by,
+                                  child: Text(by.label),
+                                ),
+                              const PopupMenuDivider(),
+                              CheckedPopupMenuItem(
+                                value: GoalSort(by: _sort.by),
+                                checked: !_sort.descending,
                                 child: Text(
-                                  'GoalPunch',
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
+                                  'Ascending · ${_sort.ascendingDescription}',
+                                ),
+                              ),
+                              CheckedPopupMenuItem(
+                                value: GoalSort(by: _sort.by, descending: true),
+                                checked: _sort.descending,
+                                child: Text(
+                                  'Descending · ${_sort.descendingDescription}',
                                 ),
                               ),
                             ],
                           ),
-                    pinned: true,
-                    actions: [
-                      if (_selecting) ...[
-                        IconButton(
-                          tooltip: 'Select all visible goals',
-                          onPressed: goals.isEmpty || _deletingGoals
-                              ? null
-                              : () => setState(() {
-                                  _selectedGoalIds.addAll(
-                                    goals.map((goal) => goal.id),
-                                  );
-                                }),
-                          icon: const Icon(Icons.select_all),
-                        ),
-                        IconButton(
-                          tooltip: 'Delete selected goals',
-                          onPressed: _deletingGoals
-                              ? null
-                              : _deleteSelectedGoals,
-                          icon: const Icon(Icons.delete_outline),
-                        ),
-                      ] else ...[
-                        if (kIsWeb)
                           IconButton(
-                            tooltip: 'Reload tasks',
-                            onPressed: _loading ? null : _loadGoals,
-                            icon: const Icon(Icons.refresh),
+                            tooltip: 'Account',
+                            onPressed: _loading ? null : _openAccount,
+                            icon: _accountAvatar(),
                           ),
-                          IconButton(
-                            tooltip: 'Reset children and goals for onboarding (debug)',
-                            onPressed:
-                                _loading ||
-                                    _startingOnboarding ||
-                                    _resettingExamples
-                                ? null
-                                : _restartOnboardingWithExamples,
-                            icon: const Icon(Icons.help_outline),
-                          ),
-                        IconButton(
-                          focusNode: _childrenFocus,
-                          tooltip: 'Manage children',
-                          onPressed: _loading ? null : _manageChildren,
-                          icon: const Icon(Icons.people_outline),
-                        ),
-                        PopupMenuButton<GoalSort>(
-                          tooltip: 'Sort goals',
-                          enabled: !_loading && !_savingSort,
-                          icon: const Icon(Icons.sort),
-                          onSelected: _setSort,
-                          itemBuilder: (_) => [
-                            for (final by in GoalSortBy.values)
-                              CheckedPopupMenuItem(
-                                value: GoalSort(
-                                  by: by,
-                                  descending: _sort.descending,
-                                ),
-                                checked: _sort.by == by,
-                                child: Text(by.label),
-                              ),
-                            const PopupMenuDivider(),
-                            CheckedPopupMenuItem(
-                              value: GoalSort(by: _sort.by),
-                              checked: !_sort.descending,
-                              child: Text(
-                                'Ascending · ${_sort.ascendingDescription}',
-                              ),
-                            ),
-                            CheckedPopupMenuItem(
-                              value: GoalSort(by: _sort.by, descending: true),
-                              checked: _sort.descending,
-                              child: Text(
-                                'Descending · ${_sort.descendingDescription}',
-                              ),
-                            ),
-                          ],
-                        ),
-                        IconButton(
-                          tooltip: 'Account',
-                          onPressed: _loading ? null : _openAccount,
-                          icon: _accountAvatar(),
-                        ),
+                        ],
                       ],
-                    ],
-                    bottom: _loading && _children.isEmpty
-                        ? null
-                        : PreferredSize(
-                            preferredSize: const Size.fromHeight(108),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                ChildrenChips(
-                                  children: _children,
-                                  selectedChildId: _selectedChildId,
-                                  showAllChildren: true,
-                                  padding: const EdgeInsets.fromLTRB(
-                                    16,
-                                    8,
-                                    16,
-                                    4,
+                      bottom: _loading && children.isEmpty
+                          ? null
+                          : PreferredSize(
+                              preferredSize: const Size.fromHeight(108),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  ChildrenChips(
+                                    children: children,
+                                    selectedChildId: selectedChildId,
+                                    showAllChildren: true,
+                                    padding: const EdgeInsets.fromLTRB(
+                                      16,
+                                      8,
+                                      16,
+                                      4,
+                                    ),
+                                    onSelected: (id) =>
+                                        setState(() => _selectedChildId = id),
+                                    onAddChild: _addChild,
                                   ),
-                                  onSelected: (id) =>
-                                      setState(() => _selectedChildId = id),
-                                  onAddChild: _addChild,
-                                ),
-                                TabBar(
-                                  controller: _statusController,
-                                  isScrollable: false,
-                                  tabAlignment: TabAlignment.fill,
-                                  dividerHeight: 0,
-                                  indicatorSize: TabBarIndicatorSize.tab,
-                                  indicatorWeight: 2,
-                                  labelColor: Theme.of(context)
-                                      .colorScheme
-                                      .onPrimaryContainer,
-                                  indicatorColor: Theme.of(context)
-                                      .colorScheme
-                                      .onPrimaryContainer,
-                                  unselectedLabelColor: Theme.of(context)
-                                      .colorScheme
-                                      .onSurfaceVariant,
-                                  labelStyle: Theme.of(context)
-                                      .textTheme
-                                      .titleSmall,
-                                  labelPadding: const EdgeInsets.symmetric(
-                                    horizontal: 16,
+                                  TabBar(
+                                    controller: _statusController,
+                                    isScrollable: false,
+                                    tabAlignment: TabAlignment.fill,
+                                    dividerHeight: 0,
+                                    indicatorSize: TabBarIndicatorSize.tab,
+                                    indicatorWeight: 2,
+                                    labelColor: Theme.of(
+                                      context,
+                                    ).colorScheme.onPrimaryContainer,
+                                    indicatorColor: Theme.of(
+                                      context,
+                                    ).colorScheme.onPrimaryContainer,
+                                    unselectedLabelColor: Theme.of(
+                                      context,
+                                    ).colorScheme.onSurfaceVariant,
+                                    labelStyle: Theme.of(
+                                      context,
+                                    ).textTheme.titleSmall,
+                                    labelPadding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                    ),
+                                    tabs: const [
+                                      Tab(text: 'Active'),
+                                      Tab(text: 'Past'),
+                                    ],
+                                    onTap: (index) {
+                                      setState(() => _showPast = index == 1);
+                                    },
                                   ),
-                                  tabs: const [
-                                    Tab(text: 'Active'),
-                                    Tab(text: 'Past'),
-                                  ],
-                                  onTap: (index) {
-                                    setState(() => _showPast = index == 1);
-                                  },
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
-                          ),
-                  ),
-                ],
-                body: RefreshIndicator(
-                  onRefresh: _loadGoals,
-                  child: CustomScrollView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    slivers: [
-                  if (_loading)
-                    const SliverFillRemaining(
-                      hasScrollBody: false,
-                      child: Center(child: CircularProgressIndicator()),
-                    )
-                  else if (_loadFailed)
-                    SliverFillRemaining(
-                      hasScrollBody: false,
-                      child: Center(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Text('Could not load your Firebase data.'),
-                            const SizedBox(height: 8),
-                            TextButton(
-                              onPressed: _loadGoals,
-                              child: const Text('Try again'),
-                            ),
-                          ],
-                        ),
-                      ),
-                    )
-                  else if (goals.isEmpty)
-                    SliverFillRemaining(
-                      hasScrollBody: false,
-                      child: Padding(
-                        padding: const EdgeInsets.only(bottom: 184),
-                        child: EmptyGoals(isPast: _showPast),
-                      ),
-                    )
-                  else
-                    SliverPadding(
-                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 184),
-                      sliver: SliverList.separated(
-                        itemCount: goals.length,
-                        separatorBuilder: (_, _) => const SizedBox(height: 10),
-                        itemBuilder: (context, index) {
-                          final goal = goals[index];
-                          final card = GoalCard(
-                            goal: goal,
-                            isCreatedByMe: goal.creatorId == FirebaseAuth.instance.currentUser?.uid,
-                            child: _children
-                                .where((child) => child.id == goal.childId)
-                                .firstOrNull,
-                            isPast: _showPast,
-                            selectionMode: _selecting,
-                            isSelected: _selectedGoalIds.contains(goal.id),
-                            onTap: _selecting
-                                ? () => _toggleGoalSelection(goal)
-                                : null,
-                            onLongPress: () => _toggleGoalSelection(goal),
-                            onCopy: () => _copyGoal(goal),
-                            onDelete: () => _deleteGoal(goal),
-                            onPrint: () => _printPunchCards([goal]),
-                          );
-                          return Dismissible(
-                            key: ValueKey(goal.id),
-                            direction: _selecting
-                                ? DismissDirection.none
-                                : DismissDirection.endToStart,
-                            background: const _GoalDeleteBackground(),
-                            confirmDismiss: (_) => _confirmDeleteGoal(goal),
-                            onDismissed: (_) => _removeGoal(goal),
-                            child: index == 0
-                                ? Focus(
-                                    focusNode: _goalsFocus,
-                                    skipTraversal: true,
-                                    child: card,
-                                  )
-                                : card,
-                          );
-                        },
-                      ),
-                    ),
-                    ],
-                  ),
-                ),
-              ),
-              if (!_loading) const _BottomSurfaceGradient(),
-            ],
-          ),
-          floatingActionButtonLocation:
-              FloatingActionButtonLocation.centerFloat,
-          floatingActionButton: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: SizedBox(
-              width: double.infinity,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  if (_selecting)
-                    SizedBox(
-                      height: 56,
-                      child: FilledButton.icon(
-                        onPressed: _deletingGoals ? null : _printSelectedGoals,
-                        icon: const Icon(Icons.print_outlined),
-                        label: Text(
-                          'Print selected (${_selectedGoalIds.length})',
-                        ),
-                      ),
-                    )
-                  else ...[
-                    SizedBox(
-                      height: 56,
-                      child: FilledButton.icon(
-                        style: FilledButton.styleFrom(
-                          foregroundColor: Theme.of(context)
-                              .colorScheme
-                              .onSecondaryContainer,
-                          backgroundColor: Theme.of(context)
-                              .colorScheme
-                              .secondaryContainer,
-                        ),
-                        onPressed: _loading ? null : _scanCard,
-                        focusNode: _scanFocus,
-                        icon: const Icon(Icons.document_scanner_outlined),
-                        label: const Text('Scan card'),
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    SizedBox(
-                      height: 56,
-                      child: FilledButton.icon(
-                        onPressed: _loading ? null : () => _editGoal(),
-                        focusNode: _addGoalFocus,
-                        icon: const Icon(Icons.add),
-                        label: const Text('Add goal'),
-                      ),
                     ),
                   ],
-                ],
+                  body: RefreshIndicator(
+                    onRefresh: _loadGoals,
+                    child: CustomScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      slivers: [
+                        if (_loading)
+                          const SliverFillRemaining(
+                            hasScrollBody: false,
+                            child: Center(child: CircularProgressIndicator()),
+                          )
+                        else if (_loadFailed)
+                          SliverFillRemaining(
+                            hasScrollBody: false,
+                            child: Center(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Text(
+                                    'Could not load your Firebase data.',
+                                  ),
+                                  const SizedBox(height: 8),
+                                  TextButton(
+                                    onPressed: _loadGoals,
+                                    child: const Text('Try again'),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          )
+                        else if (goals.isEmpty)
+                          SliverFillRemaining(
+                            hasScrollBody: false,
+                            child: Padding(
+                              padding: const EdgeInsets.only(bottom: 184),
+                              child: EmptyGoals(isPast: showPast),
+                            ),
+                          )
+                        else
+                          SliverPadding(
+                            padding: const EdgeInsets.fromLTRB(16, 12, 16, 184),
+                            sliver: SliverList.separated(
+                              itemCount: goals.length,
+                              separatorBuilder: (_, _) =>
+                                  const SizedBox(height: 10),
+                              itemBuilder: (context, index) {
+                                final goal = goals[index];
+                                final card = GoalCard(
+                                  goal: goal,
+                                  isCreatedByMe:
+                                      goal.creatorId ==
+                                      FirebaseAuth.instance.currentUser?.uid,
+                                  child: children
+                                      .where(
+                                        (child) => child.id == goal.childId,
+                                      )
+                                      .firstOrNull,
+                                  isPast: showPast,
+                                  selectionMode: _selecting,
+                                  isSelected: _selectedGoalIds.contains(
+                                    goal.id,
+                                  ),
+                                  onTap: _selecting
+                                      ? () => _toggleGoalSelection(goal)
+                                      : null,
+                                  onLongPress: () => _toggleGoalSelection(goal),
+                                  onCopy: () => _copyGoal(goal),
+                                  onDelete: () => _deleteGoal(goal),
+                                  onPrint: () => _printPunchCards([goal]),
+                                );
+                                return Dismissible(
+                                  key: ValueKey(goal.id),
+                                  direction: _selecting
+                                      ? DismissDirection.none
+                                      : DismissDirection.endToStart,
+                                  background: const _GoalDeleteBackground(),
+                                  confirmDismiss: (_) =>
+                                      _confirmDeleteGoal(goal),
+                                  onDismissed: (_) => _removeGoal(goal),
+                                  child: index == 0
+                                      ? Focus(
+                                          focusNode: _goalsFocus,
+                                          skipTraversal: true,
+                                          child: card,
+                                        )
+                                      : card,
+                                );
+                              },
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+                if (!_loading) const _BottomSurfaceGradient(),
+              ],
+            ),
+            floatingActionButtonLocation:
+                FloatingActionButtonLocation.centerFloat,
+            floatingActionButton: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: SizedBox(
+                width: double.infinity,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (_selecting)
+                      SizedBox(
+                        height: 56,
+                        child: FilledButton.icon(
+                          onPressed: _deletingGoals
+                              ? null
+                              : _printSelectedGoals,
+                          icon: const Icon(Icons.print_outlined),
+                          label: Text(
+                            'Print selected (${_selectedGoalIds.length})',
+                          ),
+                        ),
+                      )
+                    else ...[
+                      SizedBox(
+                        height: 56,
+                        child: FilledButton.icon(
+                          style: FilledButton.styleFrom(
+                            foregroundColor: Theme.of(
+                              context,
+                            ).colorScheme.onSecondaryContainer,
+                            backgroundColor: Theme.of(
+                              context,
+                            ).colorScheme.secondaryContainer,
+                          ),
+                          onPressed: _loading ? null : _scanCard,
+                          focusNode: _scanFocus,
+                          icon: const Icon(Icons.document_scanner_outlined),
+                          label: const Text('Scan card'),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      SizedBox(
+                        height: 56,
+                        child: FilledButton.icon(
+                          onPressed: _loading ? null : () => _editGoal(),
+                          focusNode: _addGoalFocus,
+                          icon: const Icon(Icons.add),
+                          label: const Text('Add goal'),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
               ),
             ),
           ),

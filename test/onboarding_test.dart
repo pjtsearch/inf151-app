@@ -1,13 +1,145 @@
+// Use FlutterFire's platform test APIs without adding runtime dependencies.
+// ignore_for_file: depend_on_referenced_packages
+
+import 'package:cloud_firestore_platform_interface/src/pigeon/messages.pigeon.dart';
+import 'package:firebase_auth_platform_interface/firebase_auth_platform_interface.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_core_platform_interface/test.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:inf151_app/app.dart';
 import 'package:inf151_app/models/child.dart';
 import 'package:inf151_app/models/goal.dart';
+import 'package:inf151_app/screens/goals_page.dart';
 import 'package:inf151_app/services/child_storage.dart';
 import 'package:inf151_app/services/goal_storage.dart';
 import 'package:inf151_app/services/goal_reminder_service.dart';
+import 'package:inf151_app/widgets/children_chips.dart';
+import 'package:inf151_app/widgets/goal_card.dart';
 import 'package:onboarding_overlay/onboarding_overlay.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+
+class _Auth extends FirebaseAuthPlatform {
+  late final _user = _User(this);
+
+  @override
+  FirebaseAuthPlatform delegateFor({required FirebaseApp app}) => this;
+
+  @override
+  FirebaseAuthPlatform setInitialValues({
+    InternalUserDetails? currentUser,
+    String? languageCode,
+  }) => this;
+
+  @override
+  UserPlatform get currentUser => _user;
+}
+
+class _MultiFactor extends MultiFactorPlatform {
+  _MultiFactor(super.auth);
+}
+
+class _User extends UserPlatform {
+  _User(FirebaseAuthPlatform auth)
+    : super(
+        auth,
+        _MultiFactor(auth),
+        InternalUserDetails(
+          userInfo: InternalUserInfo(
+            uid: 'parent',
+            isAnonymous: false,
+            isEmailVerified: true,
+          ),
+          providerData: [],
+        ),
+      );
+}
+
+// Field paths are normally decoded on the native side of the channel.
+class _FirestoreCodec extends PigeonCodec {
+  const _FirestoreCodec();
+
+  @override
+  Object? readValueOfType(int type, ReadBuffer buffer) {
+    if (type == 192) {
+      return List.generate(readSize(buffer), (_) => readValue(buffer));
+    }
+    return super.readValueOfType(type, buffer);
+  }
+}
+
+/// Serve fixture reads and record every write made by the real storage services.
+class _Firestore {
+  final documents = <String, Map<String, Object?>>{
+    'parents/parent': {'childIds': <String>[], 'onboardingSeen': false},
+  };
+  final writes = <String, List<List<Object?>>>{};
+  final metadata = InternalSnapshotMetadata(
+    hasPendingWrites: false,
+    isFromCache: false,
+  );
+
+  InternalDocumentSnapshot snapshot(String path) => InternalDocumentSnapshot(
+    path: path,
+    data: documents[path],
+    metadata: metadata,
+  );
+
+  void install() {
+    final messenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    for (final method in [
+      'documentReferenceGet',
+      'queryGet',
+      'documentReferenceSet',
+      'documentReferenceUpdate',
+      'documentReferenceDelete',
+      'writeBatchCommit',
+    ]) {
+      messenger.setMockDecodedMessageHandler<Object?>(
+        BasicMessageChannel<Object?>(
+          'dev.flutter.pigeon.cloud_firestore_platform_interface.FirebaseFirestoreHostApi.$method',
+          const _FirestoreCodec(),
+        ),
+        (message) async {
+          final args = message! as List<Object?>;
+          if (method == 'documentReferenceGet') {
+            return [snapshot((args[1]! as DocumentReferenceRequest).path)];
+          }
+          if (method == 'queryGet') {
+            final path = args[1]! as String;
+            return [
+              InternalQuerySnapshot(
+                documents: [
+                  for (final key in documents.keys)
+                    if (key.startsWith('$path/')) snapshot(key),
+                ],
+                documentChanges: [],
+                metadata: metadata,
+              ),
+            ];
+          }
+          writes.putIfAbsent(method, () => []).add(args);
+          if (method == 'documentReferenceSet') {
+            final request = args[1]! as DocumentReferenceRequest;
+            documents
+                .putIfAbsent(request.path, () => {})
+                .addAll(request.data!.cast<String, Object?>());
+          }
+          return [null];
+        },
+      );
+    }
+  }
+
+  void expectOnlyCompletionSaved() {
+    expect(writes.keys, ['documentReferenceSet']);
+    for (final args in writes['documentReferenceSet']!) {
+      final request = args[1]! as DocumentReferenceRequest;
+      expect(request.path, 'parents/parent');
+      expect(request.data, {'onboardingSeen': true});
+    }
+  }
+}
 
 class _Reminders extends GoalReminderService {
   final snapshots = <List<Goal>>[];
@@ -29,21 +161,67 @@ Future<void> _showApp(
   tester.view.physicalSize = size;
   addTearDown(tester.view.resetDevicePixelRatio);
   addTearDown(tester.view.resetPhysicalSize);
-  await tester.pumpWidget(GoalApp(reminderService: reminderService));
+  await tester.pumpWidget(
+    MaterialApp(home: GoalsPage(reminderService: reminderService)),
+  );
   await tester.pumpAndSettle();
 }
 
 bool _guideVisible(WidgetTester tester) =>
     tester.state<OnboardingState>(find.byType(Onboarding)).isVisible();
 
+void _expectExamples(WidgetTester tester) {
+  final children = tester
+      .widget<ChildrenChips>(find.byType(ChildrenChips))
+      .children;
+  expect(children.map((child) => child.name), ['Alex', 'Sam']);
+  expect(children.map((child) => child.color).toSet(), hasLength(2));
+  final goals = tester
+      .widgetList<GoalCard>(find.byType(GoalCard))
+      .map((card) => card.goal);
+  expect(goals, isNotEmpty);
+  expect(goals.every((goal) => goal.id.startsWith('example-')), isTrue);
+  expect(find.text('Read for 20 minutes'), findsOneWidget);
+}
+
 void main() {
-  testWidgets('first launch shows four steps and remembers completion', (
+  TestWidgetsFlutterBinding.ensureInitialized();
+  late _Firestore firestore;
+
+  setUpAll(() async {
+    setupFirebaseCoreMocks();
+    await Firebase.initializeApp();
+    FirebaseAuthPlatform.instance = _Auth();
+  });
+
+  setUp(() {
+    firestore = _Firestore()..install();
+  });
+
+  testWidgets('first launch previews examples, then remembers completion', (
     tester,
   ) async {
-    SharedPreferences.setMockInitialValues({});
-    await _showApp(tester);
+    final reminders = _Reminders();
+    await _showApp(tester, reminderService: reminders);
     expect(find.text('Add your children'), findsOneWidget);
     expect(find.text('1 of 4'), findsOneWidget);
+    _expectExamples(tester);
+    expect(await ChildStorage().load(), isEmpty);
+    expect(await GoalStorage().load(), isEmpty);
+    expect(firestore.writes, isEmpty);
+    expect(reminders.snapshots.single, isEmpty);
+    expect(reminders.childSnapshots.single, isEmpty);
+    // Preview card actions must also be inert when invoked by keyboard shortcuts.
+    final card = tester.widgetList<GoalCard>(find.byType(GoalCard)).first;
+    card.onCopy();
+    card.onDelete();
+    card.onPrint();
+    card.onLongPress?.call();
+    await tester.pumpAndSettle();
+    expect(find.byType(GoalsPage), findsOneWidget);
+    expect(find.byType(AlertDialog), findsNothing);
+    expect(find.text('New goal'), findsNothing);
+    expect(firestore.writes, isEmpty);
     for (final title in [
       'Create a goal',
       'Print cards together',
@@ -53,59 +231,132 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text(title), findsOneWidget);
     }
-    expect(find.text('4 of 4'), findsOneWidget);
     await tester.tap(find.text('Done'));
     await tester.pumpAndSettle();
     expect(_guideVisible(tester), isFalse);
-    final preferences = await SharedPreferences.getInstance();
-    expect(preferences.getBool('onboarding_seen'), isTrue);
+    expect(find.byType(GoalCard), findsNothing);
+    expect(find.text('No goals yet'), findsOneWidget);
+    expect(await ChildStorage().load(), isEmpty);
+    expect(await GoalStorage().load(), isEmpty);
+    expect(await GoalStorage().loadOnboardingSeen(), isTrue);
+    firestore.expectOnlyCompletionSaved();
     await tester.pumpWidget(const SizedBox.shrink());
-    await tester.pumpWidget(const GoalApp());
-    await tester.pumpAndSettle();
-    expect(_guideVisible(tester), isFalse);
-    expect(find.text('Add your children'), findsNothing);
-  });
-
-  testWidgets('debug button replays the guide and Skip dismisses it', (
-    tester,
-  ) async {
-    SharedPreferences.setMockInitialValues({'onboarding_seen': true});
     await _showApp(tester);
     expect(_guideVisible(tester), isFalse);
-    await tester.tap(
-      find.byTooltip('Reset children and goals for onboarding (debug)'),
-    );
-    await tester.pumpAndSettle();
-    expect(await GoalStorage().load(), hasLength(3));
-    final children = await ChildStorage().load();
-    expect(children, hasLength(2));
-    expect(children.map((child) => child.color).toSet(), hasLength(2));
-    expect(find.text('Add your children'), findsOneWidget);
-    await tester.tap(find.text('Next'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Skip'));
-    await tester.pumpAndSettle();
-    expect(_guideVisible(tester), isFalse);
-    await tester.tap(
-      find.byTooltip('Reset children and goals for onboarding (debug)'),
-    );
-    await tester.pumpAndSettle();
-    expect(await GoalStorage().load(), hasLength(3));
-    expect(
-      (await ChildStorage().load()).map((child) => child.id),
-      children.map((child) => child.id),
-    );
-    expect(find.text('1 of 4'), findsOneWidget);
-    await tester.binding.handlePopRoute();
-    await tester.pumpAndSettle();
-    expect(_guideVisible(tester), isFalse);
-    expect(find.text('Add goal'), findsOneWidget);
+    expect(find.byType(GoalCard), findsNothing);
   });
 
-  testWidgets('the guide fits a small screen in dark mode with large text', (
+  testWidgets('replay, Skip, and Back discard examples without writes', (
     tester,
   ) async {
-    SharedPreferences.setMockInitialValues({});
+    firestore.documents['parents/parent']!['onboardingSeen'] = true;
+    await _showApp(tester);
+    for (final useBack in [false, true]) {
+      await tester.tap(find.byTooltip('Show tutorial'));
+      await tester.pumpAndSettle();
+      _expectExamples(tester);
+      expect(find.text('1 of 4'), findsOneWidget);
+      if (useBack) {
+        await tester.binding.handlePopRoute();
+      } else {
+        await tester.tap(find.text('Skip'));
+      }
+      await tester.pumpAndSettle();
+      expect(_guideVisible(tester), isFalse);
+      expect(find.byType(GoalCard), findsNothing);
+      expect(
+        tester.widget<ChildrenChips>(find.byType(ChildrenChips)).children,
+        isEmpty,
+      );
+      firestore.expectOnlyCompletionSaved();
+    }
+  });
+
+  for (final replay in [false, true]) {
+    testWidgets(
+      '${replay ? 'replay' : 'automatic onboarding'} preserves real data, filters, and reminders',
+      (tester) async {
+        final child = const Child(id: 'real-child', name: 'Taylor');
+        final goal = Goal(
+          id: 'real-goal',
+          childId: child.id,
+          title: 'My real goal',
+          frequency: 1,
+          frequencyUnit: FrequencyUnit.day,
+          duration: 2,
+          durationUnit: DurationUnit.week,
+          startDate: DateUtils.dateOnly(DateTime.now()),
+          completedTasks: 2,
+        );
+        firestore.documents['parents/parent']!.addAll({
+          'childIds': [child.id],
+          'onboardingSeen': replay,
+        });
+        firestore.documents['children/${child.id}'] = {
+          ...child.toJson(),
+          'parentIds': ['parent'],
+        };
+        firestore.documents['goals/${goal.id}'] = goal.toJson();
+        expect((await ChildStorage().load()).single.toJson(), child.toJson());
+        expect((await GoalStorage().load()).single.toJson(), goal.toJson());
+        final reminders = _Reminders();
+        await _showApp(tester, reminderService: reminders);
+        if (replay) {
+          await tester.tap(find.text('Taylor').first);
+          await tester.tap(find.text('Past'));
+          await tester.pumpAndSettle();
+          await tester.tap(find.byTooltip('Show tutorial'));
+          await tester.pumpAndSettle();
+        }
+        _expectExamples(tester);
+        expect(find.text(goal.title), findsNothing);
+        expect((await GoalStorage().load()).single.toJson(), goal.toJson());
+        expect((await ChildStorage().load()).single.toJson(), child.toJson());
+        expect(firestore.writes, isEmpty);
+        for (var step = 0; step < 2; step++) {
+          await tester.tap(find.text('Next'));
+          await tester.pumpAndSettle();
+        }
+        final onboarding = tester.widget<Onboarding>(find.byType(Onboarding));
+        expect(onboarding.steps[2].focusNode.debugLabel, 'Onboarding goals');
+        expect(onboarding.steps[2].focusNode.context, isNotNull);
+        tester.binding.handleAppLifecycleStateChanged(
+          AppLifecycleState.resumed,
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Skip'));
+        await tester.pumpAndSettle();
+        expect(_guideVisible(tester), isFalse);
+        expect(find.text('Read for 20 minutes'), findsNothing);
+        final chips = tester.widget<ChildrenChips>(find.byType(ChildrenChips));
+        expect(chips.children.single.toJson(), child.toJson());
+        expect(chips.selectedChildId, replay ? child.id : null);
+        if (replay) {
+          expect(find.text(goal.title), findsNothing);
+          expect(
+            tester.widget<TabBar>(find.byType(TabBar)).controller!.index,
+            1,
+          );
+          await tester.tap(find.text('Active'));
+          await tester.pumpAndSettle();
+        }
+        expect(find.text(goal.title), findsOneWidget);
+        expect((await GoalStorage().load()).single.toJson(), goal.toJson());
+        expect(reminders.snapshots, isNotEmpty);
+        for (final snapshot in reminders.snapshots) {
+          expect(snapshot.single.toJson(), goal.toJson());
+        }
+        for (final snapshot in reminders.childSnapshots) {
+          expect(snapshot.single.toJson(), child.toJson());
+        }
+        firestore.expectOnlyCompletionSaved();
+      },
+    );
+  }
+
+  testWidgets('guide fits a small screen in dark mode with large text', (
+    tester,
+  ) async {
     tester.platformDispatcher.platformBrightnessTestValue = Brightness.dark;
     tester.platformDispatcher.textScaleFactorTestValue = 1.6;
     addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
@@ -123,123 +374,16 @@ void main() {
     expect(_guideVisible(tester), isFalse);
   });
 
-  testWidgets(
-    'debug replay replaces children and goals and refreshes reminders',
-    (tester) async {
-      SharedPreferences.setMockInitialValues({'onboarding_seen': true});
-      await ChildStorage().save([const Child(id: 'alex', name: 'Alex')]);
-      await GoalStorage().save([
-        for (var index = 0; index < 10; index++)
-          Goal(
-            id: '$index',
-            childId: 'alex',
-            title: 'Goal $index',
-            frequency: 1,
-            frequencyUnit: FrequencyUnit.day,
-            duration: 1,
-            durationUnit: DurationUnit.week,
-            startDate: DateUtils.dateOnly(DateTime.now()),
-          ),
-      ]);
-      final reminders = _Reminders();
-      await _showApp(tester, reminderService: reminders);
-      await tester.drag(find.byType(CustomScrollView), const Offset(0, -800));
-      await tester.pumpAndSettle();
-      await tester.tap(
-        find.byTooltip('Reset children and goals for onboarding (debug)'),
-      );
-      await tester.pumpAndSettle();
-      for (var step = 0; step < 2; step++) {
-        await tester.tap(find.text('Next'));
-        await tester.pumpAndSettle();
-      }
-      expect(find.text('Print cards together'), findsOneWidget);
-      final onboarding = tester.state<OnboardingState>(find.byType(Onboarding));
-      expect(onboarding.controller.currentStep!.focusNode.context, isNotNull);
-      await tester.tap(find.text('Skip'));
-      await tester.pumpAndSettle();
-      final examples = await GoalStorage().load();
-      expect(examples, hasLength(3));
-      expect(examples.every((goal) => goal.id.startsWith('example-')), isTrue);
-      final defaultChildren = await ChildStorage().load();
-      expect(defaultChildren.map((child) => child.name), ['Alex', 'Sam']);
-      expect(defaultChildren.any((child) => child.id == 'alex'), isFalse);
-      expect(
-        examples.every(
-          (goal) => defaultChildren.any((child) => child.id == goal.childId),
-        ),
-        isTrue,
-      );
-      expect(
-        examples.map((goal) => goal.childId).toSet(),
-        defaultChildren.map((child) => child.id).toSet(),
-      );
-      expect(
-        examples.map((goal) => goal.frequencyUnit).toSet(),
-        FrequencyUnit.values.toSet(),
-      );
-      expect(
-        examples.every(
-          (goal) => goal.completedTasks > 0 && !goal.hasCompletedAllTasks,
-        ),
-        isTrue,
-      );
-      expect(
-        reminders.snapshots.last.map((goal) => goal.id),
-        examples.map((goal) => goal.id),
-      );
-      expect(
-        reminders.childSnapshots.last.map((child) => child.id),
-        defaultChildren.map((child) => child.id),
-      );
-      expect(find.text('Read for 20 minutes').hitTestable(), findsOneWidget);
-      expect(find.text('Goal 0'), findsNothing);
-      await tester.pumpWidget(const SizedBox.shrink());
-      await tester.pumpWidget(GoalApp(reminderService: reminders));
-      await tester.pumpAndSettle();
-      expect(
-        (await GoalStorage().load()).map((goal) => goal.id),
-        examples.map((goal) => goal.id),
-      );
-      expect(_guideVisible(tester), isFalse);
-      expect(
-        (await ChildStorage().load()).map((child) => child.toJson()),
-        defaultChildren.map((child) => child.toJson()),
-      );
-    },
-  );
-
-  testWidgets('automatic onboarding keeps existing goals', (tester) async {
-    SharedPreferences.setMockInitialValues({});
-    await ChildStorage().save([const Child(id: 'alex', name: 'Alex')]);
-    final goal = Goal(
-      id: 'original',
-      childId: 'alex',
-      title: 'Keep this goal',
-      frequency: 1,
-      frequencyUnit: FrequencyUnit.day,
-      duration: 2,
-      durationUnit: DurationUnit.week,
-      startDate: DateUtils.dateOnly(DateTime.now()),
-      completedTasks: 2,
-    );
-    await GoalStorage().save([goal]);
-    await _showApp(tester);
-    expect(_guideVisible(tester), isTrue);
-    await tester.tap(find.text('Skip'));
-    await tester.pumpAndSettle();
-    expect((await GoalStorage().load()).single.toJson(), goal.toJson());
-  });
-
-  testWidgets('removing the page during onboarding removes its overlay', (
+  testWidgets('removing the page during onboarding removes the overlay', (
     tester,
   ) async {
-    SharedPreferences.setMockInitialValues({});
     await _showApp(tester);
     expect(_guideVisible(tester), isTrue);
+    await tester.pumpWidget(const SizedBox.shrink());
     await tester.pumpWidget(const MaterialApp(home: Text('Another screen')));
     await tester.pumpAndSettle();
     expect(find.text('Add your children'), findsNothing);
     expect(tester.takeException(), isNull);
+    expect(firestore.writes, isEmpty);
   });
 }
