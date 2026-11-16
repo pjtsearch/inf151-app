@@ -36,7 +36,11 @@ class _ChildQrEntryPageState extends State<ChildQrEntryPage> {
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not connect to these goals. Try scanning again.')),
+        const SnackBar(
+          content: Text(
+            'Could not connect to these goals. Try scanning again.',
+          ),
+        ),
       );
     } finally {
       if (mounted) setState(() => _scanning = false);
@@ -46,60 +50,70 @@ class _ChildQrEntryPageState extends State<ChildQrEntryPage> {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Connect to your goals'),
-        actions: [
-          TextButton(onPressed: widget.onExit, child: const Text('Parent sign-in')),
-          const SizedBox(width: 8),
-        ],
-      ),
-      body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 480),
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Container(
-                    height: 180,
-                    decoration: BoxDecoration(
-                      color: colors.secondaryContainer,
-                      borderRadius: BorderRadius.circular(24),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) widget.onExit();
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          leading: BackButton(onPressed: widget.onExit),
+          title: const Text('Connect to your goals'),
+          actions: [
+            TextButton(
+              onPressed: widget.onExit,
+              child: const Text('Parent sign-in'),
+            ),
+            const SizedBox(width: 8),
+          ],
+        ),
+        body: SafeArea(
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 480),
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Container(
+                      height: 180,
+                      decoration: BoxDecoration(
+                        color: colors.secondaryContainer,
+                        borderRadius: BorderRadius.circular(24),
+                      ),
+                      child: Icon(
+                        Icons.qr_code_2_rounded,
+                        size: 88,
+                        color: colors.onSecondaryContainer,
+                      ),
                     ),
-                    child: Icon(
-                      Icons.qr_code_2_rounded,
-                      size: 88,
-                      color: colors.onSecondaryContainer,
+                    const SizedBox(height: 24),
+                    Text(
+                      'Scan your child QR code',
+                      style: Theme.of(context).textTheme.headlineSmall,
+                      textAlign: TextAlign.center,
                     ),
-                  ),
-                  const SizedBox(height: 24),
-                  Text(
-                    'Scan your child QR code',
-                    style: Theme.of(context).textTheme.headlineSmall,
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Ask a parent to open your profile and show your QR code.',
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: colors.onSurfaceVariant,
+                    const SizedBox(height: 8),
+                    Text(
+                      'Ask a parent to open your profile and show your QR code.',
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                        color: colors.onSurfaceVariant,
+                      ),
+                      textAlign: TextAlign.center,
                     ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 24),
-                  SizedBox(
-                    height: 56,
-                    child: FilledButton.icon(
-                      onPressed: _scanning ? null : _scan,
-                      icon: const Icon(Icons.qr_code_scanner),
-                      label: Text(_scanning ? 'Connecting…' : 'Scan QR code'),
+                    const SizedBox(height: 24),
+                    SizedBox(
+                      height: 56,
+                      child: FilledButton.icon(
+                        onPressed: _scanning ? null : _scan,
+                        icon: const Icon(Icons.qr_code_scanner),
+                        label: Text(_scanning ? 'Connecting…' : 'Scan QR code'),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
