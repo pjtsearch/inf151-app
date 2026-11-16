@@ -199,6 +199,28 @@ class _GoalFormSheetState extends State<GoalFormSheet> {
                     ),
                   ),
                   const SizedBox(height: 16),
+                  Text(
+                    'Starting date',
+                    style: Theme.of(context).textTheme.titleSmall,
+                  ),
+                  const SizedBox(height: 4),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () async {
+                        final date = await showDatePicker(
+                          context: context,
+                          initialDate: _startDate,
+                          firstDate: DateTime(2000),
+                          lastDate: DateTime(2100),
+                        );
+                        if (date != null) setState(() => _startDate = date);
+                      },
+                      icon: const Icon(Icons.calendar_today_outlined),
+                      label: Text(dateLabel),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
                   Row(
                     children: [
                       Expanded(
@@ -267,23 +289,6 @@ class _GoalFormSheetState extends State<GoalFormSheet> {
                         ),
                       ),
                     ],
-                  ),
-                  const SizedBox(height: 8),
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: TextButton.icon(
-                      onPressed: () async {
-                        final date = await showDatePicker(
-                          context: context,
-                          initialDate: _startDate,
-                          firstDate: DateTime(2000),
-                          lastDate: DateTime(2100),
-                        );
-                        if (date != null) setState(() => _startDate = date);
-                      },
-                      icon: const Icon(Icons.calendar_today_outlined),
-                      label: Text('Starts $dateLabel'),
-                    ),
                   ),
                   const SizedBox(height: 12),
                   FilledButton(
