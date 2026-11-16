@@ -220,6 +220,7 @@ class _ChildGoalsPageState extends State<ChildGoalsPage>
                       child: child,
                       isPast: _showPast,
                       readOnly: true,
+                      showChildBadge: false,
                       onCopy: () {},
                       onDelete: () {},
                       onPrint: () {},

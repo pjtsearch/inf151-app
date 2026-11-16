@@ -18,6 +18,7 @@ class GoalCard extends StatelessWidget {
     this.selectionMode = false,
     this.isSelected = false,
     this.readOnly = false,
+    this.showChildBadge = true,
     this.onTap,
     this.onLongPress,
   });
@@ -32,6 +33,7 @@ class GoalCard extends StatelessWidget {
   final bool selectionMode;
   final bool isSelected;
   final bool readOnly;
+  final bool showChildBadge;
   final VoidCallback? onTap;
   final VoidCallback? onLongPress;
 
@@ -62,7 +64,7 @@ class GoalCard extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    if (child != null)
+                    if (showChildBadge && child != null)
                       Expanded(
                         child: Align(
                           alignment: AlignmentDirectional.centerStart,
