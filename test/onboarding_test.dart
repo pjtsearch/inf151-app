@@ -221,7 +221,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(GoalsPage), findsOneWidget);
     expect(find.byType(AlertDialog), findsNothing);
-    expect(find.text('New goal'), findsNothing);
+    expect(find.byType(GoalFormSheet), findsNothing);
     expect(firestore.writes, isEmpty);
     for (final title in [
       'Create a goal',
@@ -351,6 +351,12 @@ void main() {
           expect(snapshot.single.toJson(), child.toJson());
         }
         firestore.expectOnlyCompletionSaved();
+
+        if (replay) {
+          await tester.tap(find.byTooltip('Make a copy').hitTestable());
+          await tester.pumpAndSettle();
+          expect(find.widgetWithText(GoalFormSheet, 'Copy goal'), findsOneWidget);
+        }
       },
     );
   }

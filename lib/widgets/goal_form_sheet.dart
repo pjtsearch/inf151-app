@@ -112,6 +112,11 @@ class _GoalFormSheetState extends State<GoalFormSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final title = widget.isCopy
+        ? 'Copy goal'
+        : widget.goal == null
+        ? 'New goal'
+        : 'Edit goal';
     final dateLabel = formatDate(_startDate);
     return Padding(
       padding: EdgeInsets.only(
@@ -131,9 +136,7 @@ class _GoalFormSheetState extends State<GoalFormSheet> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    widget.goal == null || widget.isCopy
-                        ? 'New goal'
-                        : 'Edit goal',
+                    title,
                     style: Theme.of(context).textTheme.headlineSmall,
                   ),
                   const SizedBox(height: 20),
