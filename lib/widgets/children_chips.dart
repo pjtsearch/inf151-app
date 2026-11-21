@@ -66,7 +66,7 @@ class ChildrenChips extends StatelessWidget {
               side: BorderSide.none,
               checkmarkColor: child.color.foreground,
               showCheckmark: true,
-              onSelected: (_) => onSelected(child.id),
+              onSelected: (selected) => onSelected(selected ? child.id : null),
             ),
             const SizedBox(width: 8),
           ],

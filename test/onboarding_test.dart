@@ -16,6 +16,7 @@ import 'package:inf151_app/services/goal_storage.dart';
 import 'package:inf151_app/services/goal_reminder_service.dart';
 import 'package:inf151_app/widgets/children_chips.dart';
 import 'package:inf151_app/widgets/goal_card.dart';
+import 'package:inf151_app/widgets/goal_form_sheet.dart';
 import 'package:onboarding_overlay/onboarding_overlay.dart';
 
 class _Auth extends FirebaseAuthPlatform {
@@ -353,6 +354,71 @@ void main() {
       },
     );
   }
+
+  testWidgets(
+    'tapping the selected child clears the filter and form selection',
+    (tester) async {
+      const child = Child(id: 'taylor', name: 'Taylor');
+      const sibling = Child(id: 'sam', name: 'Sam');
+      final goal = Goal(
+        id: 'sam-goal',
+        childId: sibling.id,
+        title: 'Read a book',
+        frequency: 1,
+        frequencyUnit: FrequencyUnit.day,
+        duration: 1,
+        durationUnit: DurationUnit.week,
+        startDate: DateUtils.dateOnly(DateTime.now()),
+      );
+      firestore.documents['parents/parent']!.addAll({
+        'childIds': [child.id, sibling.id],
+        'onboardingSeen': true,
+      });
+      for (final item in [child, sibling]) {
+        firestore.documents['children/${item.id}'] = {
+          ...item.toJson(),
+          'parentIds': ['parent'],
+        };
+      }
+      firestore.documents['goals/${goal.id}'] = goal.toJson();
+      await _showApp(tester, reminderService: _Reminders());
+
+      final chip = find.widgetWithText(ChoiceChip, child.name);
+      final goalCard = find.widgetWithText(GoalCard, goal.title);
+      await tester.tap(chip);
+      await tester.pumpAndSettle();
+      expect(tester.widget<ChoiceChip>(chip).selected, isTrue);
+      expect(goalCard, findsNothing);
+      await tester.tap(chip);
+      await tester.pumpAndSettle();
+      expect(tester.widget<ChoiceChip>(chip).selected, isFalse);
+      expect(
+        tester
+            .widget<ChoiceChip>(find.widgetWithText(ChoiceChip, 'All children'))
+            .selected,
+        isTrue,
+      );
+      expect(goalCard, findsWidgets);
+
+      await tester.tap(find.text('Add goal'));
+      await tester.pumpAndSettle();
+      final formChip = find.descendant(
+        of: find.byType(GoalFormSheet),
+        matching: chip,
+      );
+      await tester.tap(formChip);
+      await tester.pumpAndSettle();
+      expect(tester.widget<ChoiceChip>(formChip).selected, isTrue);
+      await tester.tap(formChip);
+      await tester.pumpAndSettle();
+      expect(tester.widget<ChoiceChip>(formChip).selected, isFalse);
+      final save = find.text('Save goal');
+      await tester.ensureVisible(save);
+      await tester.tap(save);
+      await tester.pumpAndSettle();
+      expect(find.text('Select a child for this goal'), findsOneWidget);
+    },
+  );
 
   testWidgets('guide fits a small screen in dark mode with large text', (
     tester,
