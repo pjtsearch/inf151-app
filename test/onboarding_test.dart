@@ -11,6 +11,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:inf151_app/models/child.dart';
 import 'package:inf151_app/models/goal.dart';
 import 'package:inf151_app/screens/goals_page.dart';
+import 'package:inf151_app/screens/tutorials_page.dart';
 import 'package:inf151_app/services/child_storage.dart';
 import 'package:inf151_app/services/goal_storage.dart';
 import 'package:inf151_app/services/goal_reminder_service.dart';
@@ -171,6 +172,14 @@ Future<void> _showApp(
 bool _guideVisible(WidgetTester tester) =>
     tester.state<OnboardingState>(find.byType(Onboarding)).isVisible();
 
+Future<void> _replayOnboarding(WidgetTester tester) async {
+  await tester.tap(find.byTooltip('Help'));
+  await tester.pumpAndSettle();
+  await tester.tap(find.text('Onboarding'));
+  await tester.pumpAndSettle();
+  expect(find.byType(TutorialsPage), findsNothing);
+}
+
 void _expectExamples(WidgetTester tester) {
   final children = tester
       .widget<ChildrenChips>(find.byType(ChildrenChips))
@@ -247,14 +256,45 @@ void main() {
     expect(find.byType(GoalCard), findsNothing);
   });
 
+  testWidgets('the top-bar Help button replaces the Account tutorials link', (
+    tester,
+  ) async {
+    firestore.documents['parents/parent']!['onboardingSeen'] = true;
+    await _showApp(tester, reminderService: _Reminders());
+
+    await tester.tap(find.byTooltip('Account'));
+    await tester.pumpAndSettle();
+    expect(find.text('Account & Settings'), findsOneWidget);
+    await tester.drag(find.byType(ListView), const Offset(0, -600));
+    await tester.pumpAndSettle();
+    expect(find.text('Tutorials'), findsNothing);
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Help'));
+    await tester.pumpAndSettle();
+    expect(find.byType(TutorialsPage), findsOneWidget);
+    expect(find.text('Onboarding'), findsOneWidget);
+    await tester.tap(find.text('Adding a goal'));
+    await tester.pumpAndSettle();
+    expect(
+      find.text('Tap “Add goal” at the bottom of the screen.'),
+      findsOneWidget,
+    );
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    expect(_guideVisible(tester), isFalse);
+  });
+
   testWidgets('replay, Skip, and Back discard examples without writes', (
     tester,
   ) async {
     firestore.documents['parents/parent']!['onboardingSeen'] = true;
     await _showApp(tester);
     for (final useBack in [false, true]) {
-      await tester.tap(find.byTooltip('Show tutorial'));
-      await tester.pumpAndSettle();
+      await _replayOnboarding(tester);
       _expectExamples(tester);
       expect(find.text('1 of 4'), findsOneWidget);
       if (useBack) {
@@ -306,8 +346,7 @@ void main() {
           await tester.tap(find.text('Taylor').first);
           await tester.tap(find.text('Past'));
           await tester.pumpAndSettle();
-          await tester.tap(find.byTooltip('Show tutorial'));
-          await tester.pumpAndSettle();
+          await _replayOnboarding(tester);
         }
         _expectExamples(tester);
         expect(find.text(goal.title), findsNothing);

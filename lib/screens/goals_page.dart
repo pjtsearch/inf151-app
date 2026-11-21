@@ -18,6 +18,7 @@ import 'manage_children_page.dart';
 import 'print_preview_page.dart';
 import 'scan_card_page.dart';
 import 'account_page.dart';
+import 'tutorials_page.dart';
 import '../services/child_storage.dart';
 import '../services/goal_storage.dart';
 import '../services/punch_card_pdf.dart';
@@ -164,6 +165,17 @@ class _GoalsPageState extends State<GoalsPage>
           ),
         ),
       );
+    }
+  }
+
+  Future<void> _openTutorials() async {
+    final route = MaterialPageRoute<bool>(
+      builder: (_) => const TutorialsPage(),
+    );
+    final startOnboarding = await Navigator.of(context).push(route);
+    if (startOnboarding == true) {
+      await route.completed;
+      if (mounted) await _showOnboarding();
     }
   }
 
@@ -736,13 +748,13 @@ class _GoalsPageState extends State<GoalsPage>
                               icon: const Icon(Icons.refresh),
                             ),
                           IconButton(
-                            tooltip: 'Show tutorial',
+                            tooltip: 'Help',
                             onPressed:
                                 _loading ||
                                     _startingOnboarding ||
                                     _onboardingVisible
                                 ? null
-                                : _showOnboarding,
+                                : _openTutorials,
                             icon: const Icon(Icons.help_outline),
                           ),
                           IconButton(

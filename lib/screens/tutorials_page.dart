@@ -46,23 +46,29 @@ class TutorialsPage extends StatelessWidget {
       child: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 520),
-          child: ListView.separated(
+          child: ListView(
             padding: const EdgeInsets.symmetric(vertical: 8),
-            itemCount: _tutorials.length,
-            separatorBuilder: (_, _) => const Divider(height: 1),
-            itemBuilder: (context, index) {
-              final tutorial = _tutorials[index];
-              return ListTile(
-                leading: const Icon(Icons.menu_book_outlined),
-                title: Text(tutorial.title),
+            children: [
+              ListTile(
+                leading: const Icon(Icons.play_circle_outline),
+                title: const Text('Onboarding'),
                 trailing: const Icon(Icons.chevron_right),
-                onTap: () => Navigator.of(context).push<void>(
-                  MaterialPageRoute<void>(
-                    builder: (_) => _TutorialDetailPage(tutorial: tutorial),
+                onTap: () => Navigator.of(context).pop<bool>(true),
+              ),
+              for (final tutorial in _tutorials) ...[
+                const Divider(height: 1),
+                ListTile(
+                  leading: const Icon(Icons.menu_book_outlined),
+                  title: Text(tutorial.title),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => Navigator.of(context).push<void>(
+                    MaterialPageRoute<void>(
+                      builder: (_) => _TutorialDetailPage(tutorial: tutorial),
+                    ),
                   ),
                 ),
-              );
-            },
+              ],
+            ],
           ),
         ),
       ),
