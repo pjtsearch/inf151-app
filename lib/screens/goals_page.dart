@@ -346,6 +346,7 @@ class _GoalsPageState extends State<GoalsPage>
   Future<void> _editGoal({Goal? goal, bool isCopy = false}) async {
     final result = await showModalBottomSheet<Goal>(
       context: context,
+      showDragHandle: true,
       isScrollControlled: true,
       useSafeArea: true,
       builder: (_) => GoalFormSheet(

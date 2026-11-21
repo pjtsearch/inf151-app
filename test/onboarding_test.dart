@@ -420,6 +420,35 @@ void main() {
     },
   );
 
+  testWidgets('bottom sheets can be dismissed by their drag handles', (
+    tester,
+  ) async {
+    firestore.documents['parents/parent']!['onboardingSeen'] = true;
+    await _showApp(tester, reminderService: _Reminders());
+
+    final sheet = find.byType(BottomSheet);
+    final handle = find.descendant(
+      of: sheet,
+      matching: find.bySemanticsLabel('Dismiss'),
+    );
+
+    await tester.tap(find.text('Add goal'));
+    await tester.pumpAndSettle();
+    expect(handle, findsOneWidget);
+    await tester.fling(handle, const Offset(0, 300), 1500);
+    await tester.pumpAndSettle();
+    expect(sheet, findsNothing);
+
+    await tester.tap(find.byTooltip('Manage children'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Add child'));
+    await tester.pumpAndSettle();
+    expect(handle, findsOneWidget);
+    await tester.fling(handle, const Offset(0, 120), 1500);
+    await tester.pumpAndSettle();
+    expect(sheet, findsNothing);
+  });
+
   testWidgets('guide fits a small screen in dark mode with large text', (
     tester,
   ) async {

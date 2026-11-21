@@ -116,7 +116,6 @@ class _GoalFormSheetState extends State<GoalFormSheet> {
     return Padding(
       padding: EdgeInsets.only(
         left: 20,
-        top: 20,
         right: 20,
         bottom: MediaQuery.viewInsetsOf(context).bottom + 20,
       ),
