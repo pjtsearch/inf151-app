@@ -30,7 +30,7 @@ class PrintPreviewPage extends StatefulWidget {
 
 class _PrintPreviewPageState extends State<PrintPreviewPage> {
   _PaperSize _paperSize = _PaperSize.letter;
-  PunchCardDesign _design = PunchCardDesign.classic;
+  PunchCardDesign? _design;
   late Future<Uint8List> _document;
   bool _printing = false;
 
@@ -144,16 +144,18 @@ class _PrintPreviewPageState extends State<PrintPreviewPage> {
                 isExpanded: true,
                 decoration: const InputDecoration(
                   labelText: 'Card design',
+                  helperText: 'Goal themes uses each goal’s saved design.',
                   border: OutlineInputBorder(),
                 ),
                 items: [
+                  const DropdownMenuItem(child: Text('Goal themes')),
                   for (final design in PunchCardDesign.values)
                     DropdownMenuItem(value: design, child: Text(design.label)),
                 ],
                 onChanged: _printing
                     ? null
                     : (design) {
-                        if (design == null || design == _design) return;
+                        if (design == _design) return;
                         setState(() {
                           _design = design;
                           _document = _buildDocument();

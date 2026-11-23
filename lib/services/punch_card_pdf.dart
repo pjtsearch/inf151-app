@@ -6,7 +6,9 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 
 import '../models/goal.dart';
-import 'punch_card_background.dart';
+import '../models/punch_card_design.dart';
+
+export '../models/punch_card_design.dart';
 
 const punchCardColumnsPerRow = 7;
 const punchCardMaxRows = 2;
@@ -66,18 +68,6 @@ String _monthLabel(DateTime startDate, int offset) {
 
 int punchCountFor(Goal goal) => goal.totalTasks;
 
-enum PunchCardDesign {
-  classic('Classic stars', punchCardBackgroundSvg),
-  ocean('Ocean waves', oceanPunchCardBackgroundSvg),
-  sunset('Sunset hills', sunsetPunchCardBackgroundSvg),
-  inkSaver('Ink saver', inkSaverPunchCardBackgroundSvg);
-
-  const PunchCardDesign(this.label, this.backgroundSvg);
-
-  final String label;
-  final String backgroundSvg;
-}
-
 class PunchCardPrintJob {
   const PunchCardPrintJob({required this.goal, this.childName});
 
@@ -89,7 +79,7 @@ Future<Uint8List> buildPunchCardPdf(
   Goal goal, {
   String? childName,
   PdfPageFormat pageFormat = PdfPageFormat.letter,
-  PunchCardDesign design = PunchCardDesign.classic,
+  PunchCardDesign? design,
 }) => buildPunchCardsPdf(
   [PunchCardPrintJob(goal: goal, childName: childName)],
   pageFormat: pageFormat,
@@ -99,7 +89,7 @@ Future<Uint8List> buildPunchCardPdf(
 Future<Uint8List> buildPunchCardsPdf(
   List<PunchCardPrintJob> jobs, {
   PdfPageFormat pageFormat = PdfPageFormat.letter,
-  PunchCardDesign design = PunchCardDesign.classic,
+  PunchCardDesign? design,
 }) async {
   final cards = <pw.Widget>[];
   const holesPerCard = punchCardColumnsPerRow * punchCardMaxRows;
@@ -114,7 +104,7 @@ Future<Uint8List> buildPunchCardsPdf(
           cardIndex,
           cardCount,
           job.childName,
-          design,
+          design ?? job.goal.design,
         ),
       );
     }

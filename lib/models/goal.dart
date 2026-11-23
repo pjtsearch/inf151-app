@@ -1,3 +1,5 @@
+import 'punch_card_design.dart';
+
 enum FrequencyUnit { day, week, month }
 
 enum DurationUnit { day, week, month }
@@ -39,6 +41,7 @@ class Goal {
     this.creatorName = '',
     this.reward = const FreeTextReward(''),
     this.completedTasks = 0,
+    this.design = PunchCardDesign.classic,
   }) : createdAt = createdAt ?? startDate;
 
   final String id;
@@ -54,6 +57,7 @@ class Goal {
   final String creatorName;
   final GoalReward reward;
   final int completedTasks;
+  final PunchCardDesign design;
 
   double get progress {
     final total = totalTasks;
@@ -125,6 +129,7 @@ class Goal {
     String? creatorName,
     GoalReward? reward,
     int? completedTasks,
+    PunchCardDesign? design,
   }) => Goal(
     id: id ?? this.id,
     childId: childId ?? this.childId,
@@ -139,6 +144,7 @@ class Goal {
     creatorName: creatorName ?? this.creatorName,
     reward: reward ?? this.reward,
     completedTasks: completedTasks ?? this.completedTasks,
+    design: design ?? this.design,
   );
 
   Map<String, Object> toJson() => {
@@ -154,6 +160,7 @@ class Goal {
     'creatorName': creatorName,
     'reward': reward.toJson(),
     'completedTasks': completedTasks,
+    'design': design.name,
   };
 
   factory Goal.fromJson(Map<String, dynamic> json) => Goal(
@@ -166,9 +173,11 @@ class Goal {
     durationUnit: DurationUnit.values.byName(json['durationUnit'] as String),
     startDate: DateTime.parse(json['startDate'] as String),
     createdAt: DateTime.tryParse(json['createdAt'] as String? ?? ''),
-    creatorId: json['parentId'] as String? ?? json['creatorId'] as String? ?? '',
+    creatorId:
+        json['parentId'] as String? ?? json['creatorId'] as String? ?? '',
     creatorName: json['creatorName'] as String? ?? '',
     reward: GoalReward.fromJson(json['reward']),
+    design: PunchCardDesign.fromJson(json['design']),
     completedTasks:
         json['completedTasks'] as int? ??
         ((json['isCompleted'] as bool? ?? false)

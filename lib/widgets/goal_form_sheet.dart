@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 
 import '../models/child.dart';
 import '../models/goal.dart';
+import '../models/punch_card_design.dart';
+import '../utils/goal_design_style.dart';
 import '../utils/goal_date_utils.dart';
 import 'children_chips.dart';
 
@@ -39,6 +41,7 @@ class _GoalFormSheetState extends State<GoalFormSheet> {
   late FrequencyUnit _frequencyUnit;
   late DurationUnit _durationUnit;
   late DateTime _startDate;
+  late PunchCardDesign _design;
 
   @override
   void initState() {
@@ -60,6 +63,7 @@ class _GoalFormSheetState extends State<GoalFormSheet> {
     _frequencyUnit = goal?.frequencyUnit ?? FrequencyUnit.day;
     _durationUnit = goal?.durationUnit ?? DurationUnit.week;
     _startDate = goal?.startDate ?? today();
+    _design = goal?.design ?? PunchCardDesign.classic;
   }
 
   @override
@@ -89,6 +93,7 @@ class _GoalFormSheetState extends State<GoalFormSheet> {
         duration: int.parse(_durationController.text),
         durationUnit: _durationUnit,
         startDate: _startDate,
+        design: _design,
         reward: FreeTextReward(_rewardController.text.trim()),
         completedTasks: current?.completedTasks ?? 0,
       ),
@@ -135,10 +140,7 @@ class _GoalFormSheetState extends State<GoalFormSheet> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(
-                    title,
-                    style: Theme.of(context).textTheme.headlineSmall,
-                  ),
+                  Text(title, style: Theme.of(context).textTheme.headlineSmall),
                   const SizedBox(height: 20),
                   FormField<String>(
                     key: _childFieldKey,
@@ -199,6 +201,34 @@ class _GoalFormSheetState extends State<GoalFormSheet> {
                       hintText: 'A relaxing afternoon',
                       border: OutlineInputBorder(),
                     ),
+                  ),
+                  const SizedBox(height: 16),
+                  DropdownButtonFormField<PunchCardDesign>(
+                    initialValue: _design,
+                    isExpanded: true,
+                    decoration: const InputDecoration(
+                      labelText: 'Goal theme',
+                      helperText:
+                          'Used on the dashboard and printed task cards.',
+                      helperMaxLines: 2,
+                      border: OutlineInputBorder(),
+                    ),
+                    items: [
+                      for (final design in PunchCardDesign.values)
+                        DropdownMenuItem(
+                          value: design,
+                          child: Row(
+                            children: [
+                              Icon(design.icon, color: design.seedColor),
+                              const SizedBox(width: 12),
+                              Flexible(child: Text(design.label)),
+                            ],
+                          ),
+                        ),
+                    ],
+                    onChanged: (design) {
+                      if (design != null) setState(() => _design = design);
+                    },
                   ),
                   const SizedBox(height: 16),
                   Text(

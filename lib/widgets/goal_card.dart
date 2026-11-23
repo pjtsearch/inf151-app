@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/child.dart';
 import '../models/goal.dart';
+import '../utils/goal_design_style.dart';
 import '../utils/goal_date_utils.dart';
 import 'child_avatar.dart';
 
@@ -41,191 +42,226 @@ class GoalCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colors = theme.colorScheme;
+    final inheritedTheme = Theme.of(context);
+    final colors = goal.design.colorScheme(inheritedTheme.brightness);
+    final theme = inheritedTheme.copyWith(
+      colorScheme: colors,
+      textTheme: inheritedTheme.textTheme.apply(
+        bodyColor: colors.onSurface,
+        displayColor: colors.onSurface,
+      ),
+    );
     final tint = colors.primaryContainer;
     final endDate = goal.endDate.subtract(const Duration(days: 1));
     final totalTasks = goal.totalTasks;
     final completedTasks = goal.completedTasks.clamp(0, totalTasks);
     final progress = goal.progress;
 
-    return Semantics(
-      selected: selectionMode ? isSelected : null,
-      child: Card(
-        color: isSelected ? colors.secondaryContainer : null,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: onTap,
-          onLongPress: onLongPress,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(
-                  children: [
-                    if (showChildBadge && child != null)
-                      Expanded(
-                        child: Align(
-                          alignment: AlignmentDirectional.centerStart,
-                          child: Container(
-                            padding: const EdgeInsetsDirectional.fromSTEB(
-                              4,
-                              4,
-                              12,
-                              4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: child!.color.background,
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            child: InkWell(
-                              onTap: onChildTap,
-                              borderRadius: BorderRadius.circular(16),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  ChildAvatar(child: child!, radius: 12),
-                                  const SizedBox(width: 6),
-                                  Flexible(
-                                    child: Text(
-                                      child!.name,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: theme.textTheme.labelMedium
-                                          ?.copyWith(
-                                            color: child!.color.foreground,
-                                            fontWeight: FontWeight.w600,
-                                          ),
+    return Theme(
+      data: theme,
+      child: Semantics(
+        selected: selectionMode ? isSelected : null,
+        child: Card(
+          color: isSelected
+              ? colors.secondaryContainer
+              : colors.surfaceContainerLow,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+            side: BorderSide(
+              color: isSelected ? colors.primary : colors.outlineVariant,
+            ),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: onTap,
+            onLongPress: onLongPress,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    children: [
+                      if (showChildBadge && child != null)
+                        Expanded(
+                          child: Align(
+                            alignment: AlignmentDirectional.centerStart,
+                            child: Container(
+                              padding: const EdgeInsetsDirectional.fromSTEB(
+                                4,
+                                4,
+                                12,
+                                4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: child!.color.background,
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: InkWell(
+                                onTap: onChildTap,
+                                borderRadius: BorderRadius.circular(16),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    ChildAvatar(child: child!, radius: 12),
+                                    const SizedBox(width: 6),
+                                    Flexible(
+                                      child: Text(
+                                        child!.name,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: theme.textTheme.labelMedium
+                                            ?.copyWith(
+                                              color: child!.color.foreground,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                      ),
                                     ),
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                      )
-                    else
-                      const Spacer(),
-                    if (!readOnly) ...[
-                      const SizedBox(width: 8),
-                      if (selectionMode)
-                        Checkbox(
-                          value: isSelected,
-                          onChanged: (_) => onTap?.call(),
-                          semanticLabel: 'Select ${goal.title}',
                         )
                       else
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            IconButton(
-                              tooltip: 'Make a copy',
-                              onPressed: onCopy,
-                              icon: const Icon(Icons.copy_outlined, size: 20),
-                              visualDensity: VisualDensity.compact,
-                            ),
-                            if (!isPast)
+                        const Spacer(),
+                      if (!readOnly) ...[
+                        const SizedBox(width: 8),
+                        if (selectionMode)
+                          Checkbox(
+                            value: isSelected,
+                            onChanged: (_) => onTap?.call(),
+                            semanticLabel: 'Select ${goal.title}',
+                          )
+                        else
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
                               IconButton(
-                                tooltip: 'Print punch card',
-                                onPressed: onPrint,
-                                icon: const Icon(Icons.print_outlined, size: 20),
+                                tooltip: 'Make a copy',
+                                onPressed: onCopy,
+                                icon: const Icon(Icons.copy_outlined, size: 20),
                                 visualDensity: VisualDensity.compact,
                               ),
-                            PopupMenuButton<String>(
-                              tooltip: 'Goal options',
-                              icon: const Icon(Icons.more_horiz),
-                              onSelected: (action) {
-                                if (action == 'delete') onDelete();
-                              },
-                              itemBuilder: (_) => const [
-                                PopupMenuItem(
-                                  value: 'delete',
-                                  child: Text('Delete'),
+                              if (!isPast)
+                                IconButton(
+                                  tooltip: 'Print punch card',
+                                  onPressed: onPrint,
+                                  icon: const Icon(
+                                    Icons.print_outlined,
+                                    size: 20,
+                                  ),
+                                  visualDensity: VisualDensity.compact,
                                 ),
-                              ],
-                            ),
-                          ],
-                        ),
+                              PopupMenuButton<String>(
+                                tooltip: 'Goal options',
+                                icon: const Icon(Icons.more_horiz),
+                                onSelected: (action) {
+                                  if (action == 'delete') onDelete();
+                                },
+                                itemBuilder: (_) => const [
+                                  PopupMenuItem(
+                                    value: 'delete',
+                                    child: Text('Delete'),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                      ],
                     ],
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  goal.title,
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
                   ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  isCreatedByMe ? 'You' : goal.creatorName,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: colors.onSurfaceVariant,
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Icon(goal.design.icon, color: colors.primary, size: 18),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          goal.design.label,
+                          style: theme.textTheme.labelMedium?.copyWith(
+                            color: colors.primary,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  goal.frequencyDescription,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: colors.onSurfaceVariant,
-                  ),
-                ),
-                if (goal.reward.label.isNotEmpty) ...[
-                  const SizedBox(height: 12),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 10,
+                  const SizedBox(height: 8),
+                  Text(
+                    goal.title,
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
                     ),
-                    decoration: BoxDecoration(
-                      color: tint,
-                      borderRadius: BorderRadius.circular(12),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    isCreatedByMe ? 'You' : goal.creatorName,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: colors.onSurfaceVariant,
                     ),
-                    child: Text(
-                      'Reward · ${goal.reward.label}',
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: colors.onPrimaryContainer,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    goal.frequencyDescription,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: colors.onSurfaceVariant,
+                    ),
+                  ),
+                  if (goal.reward.label.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 10,
+                      ),
+                      decoration: BoxDecoration(
+                        color: tint,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        'Reward · ${goal.reward.label}',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: colors.onPrimaryContainer,
+                        ),
                       ),
                     ),
+                  ],
+                  const SizedBox(height: 12),
+                  LinearProgressIndicator(
+                    value: progress,
+                    minHeight: 8,
+                    borderRadius: BorderRadius.circular(8),
+                    color: colors.onPrimaryContainer,
+                    backgroundColor: colors.surfaceContainerHighest,
+                    trackGap: 0,
+                    stopIndicatorRadius: 0,
+                    semanticsLabel:
+                        '${goal.title}: $completedTasks of $totalTasks completed',
+                  ),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    alignment: WrapAlignment.spaceBetween,
+                    spacing: 12,
+                    runSpacing: 4,
+                    children: [
+                      Text(
+                        '$completedTasks / $totalTasks completed',
+                        style: theme.textTheme.labelLarge?.copyWith(
+                          color: colors.onPrimaryContainer,
+                        ),
+                      ),
+                      Text(
+                        '${isPast ? 'Ended on' : 'Ends on'} ${formatDate(endDate)}',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: colors.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
-                const SizedBox(height: 12),
-                LinearProgressIndicator(
-                  value: progress,
-                  minHeight: 8,
-                  borderRadius: BorderRadius.circular(8),
-                  color: colors.onPrimaryContainer,
-                  backgroundColor: colors.surfaceContainerHighest,
-                  trackGap: 0,
-                  stopIndicatorRadius: 0,
-                  semanticsLabel:
-                      '${goal.title}: $completedTasks of $totalTasks completed',
-                ),
-                const SizedBox(height: 12),
-                Wrap(
-                  alignment: WrapAlignment.spaceBetween,
-                  spacing: 12,
-                  runSpacing: 4,
-                  children: [
-                    Text(
-                      '$completedTasks / $totalTasks completed',
-                      style: theme.textTheme.labelLarge?.copyWith(
-                        color: colors.onPrimaryContainer,
-                      ),
-                    ),
-                    Text(
-                      '${isPast ? 'Ended on' : 'Ends on'} ${formatDate(endDate)}',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: colors.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+              ),
             ),
           ),
         ),
