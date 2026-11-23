@@ -16,6 +16,7 @@ class GoalFormSheet extends StatefulWidget {
     this.initialChildId,
     this.goal,
     this.isCopy = false,
+    this.limitedEdit = false,
   });
 
   final List<Child> children;
@@ -23,6 +24,7 @@ class GoalFormSheet extends StatefulWidget {
   final String? initialChildId;
   final Goal? goal;
   final bool isCopy;
+  final bool limitedEdit;
 
   @override
   State<GoalFormSheet> createState() => _GoalFormSheetState();
@@ -78,6 +80,17 @@ class _GoalFormSheetState extends State<GoalFormSheet> {
   void _submit() {
     if (!_formKey.currentState!.validate()) return;
     final current = widget.goal;
+    if (widget.limitedEdit && current != null) {
+      Navigator.pop(
+        context,
+        current.copyWith(
+          title: _titleController.text.trim(),
+          reward: FreeTextReward(_rewardController.text.trim()),
+          design: _design,
+        ),
+      );
+      return;
+    }
     final now = DateTime.now();
     Navigator.pop(
       context,
@@ -142,7 +155,7 @@ class _GoalFormSheetState extends State<GoalFormSheet> {
                 children: [
                   Text(title, style: Theme.of(context).textTheme.headlineSmall),
                   const SizedBox(height: 20),
-                  FormField<String>(
+                  if (!widget.limitedEdit) FormField<String>(
                     key: _childFieldKey,
                     initialValue: _selectedChildId,
                     validator: (value) =>
@@ -178,7 +191,7 @@ class _GoalFormSheetState extends State<GoalFormSheet> {
                       ],
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  if (!widget.limitedEdit) const SizedBox(height: 16),
                   TextFormField(
                     controller: _titleController,
                     autofocus: false,
@@ -230,6 +243,7 @@ class _GoalFormSheetState extends State<GoalFormSheet> {
                       if (design != null) setState(() => _design = design);
                     },
                   ),
+                  if (!widget.limitedEdit) ...[
                   const SizedBox(height: 16),
                   Text(
                     'Starting date',
@@ -322,6 +336,7 @@ class _GoalFormSheetState extends State<GoalFormSheet> {
                       ),
                     ],
                   ),
+                  ],
                   const SizedBox(height: 12),
                   FilledButton(
                     onPressed: _submit,

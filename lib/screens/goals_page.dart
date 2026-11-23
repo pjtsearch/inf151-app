@@ -355,7 +355,11 @@ class _GoalsPageState extends State<GoalsPage>
     await _syncReminders();
   }
 
-  Future<void> _editGoal({Goal? goal, bool isCopy = false}) async {
+  Future<void> _editGoal({
+    Goal? goal,
+    bool isCopy = false,
+    bool limitedEdit = false,
+  }) async {
     final result = await showModalBottomSheet<Goal>(
       context: context,
       showDragHandle: true,
@@ -364,6 +368,7 @@ class _GoalsPageState extends State<GoalsPage>
       builder: (_) => GoalFormSheet(
         goal: goal,
         isCopy: isCopy,
+        limitedEdit: limitedEdit,
         children: _children,
         initialChildId: _selectedChildId ?? goal?.childId,
         onAddChild: _createChild,
@@ -921,7 +926,10 @@ class _GoalsPageState extends State<GoalsPage>
                                   ),
                                   onTap: _selecting
                                       ? () => _toggleGoalSelection(goal)
-                                      : null,
+                                      : () => _editGoal(
+                                          goal: goal,
+                                          limitedEdit: true,
+                                        ),
                                   onLongPress: () => _toggleGoalSelection(goal),
                                   onChildTap: _selecting
                                       ? null
