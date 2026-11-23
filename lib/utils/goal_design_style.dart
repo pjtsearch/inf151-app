@@ -10,6 +10,20 @@ extension GoalDesignStyle on PunchCardDesign {
     PunchCardDesign.inkSaver => const Color(0xFF444444),
   };
 
+  Color get cardBackgroundColor => switch (this) {
+    PunchCardDesign.classic => const Color(0xFFDFF2E9),
+    PunchCardDesign.ocean => const Color(0xFFE9F7FC),
+    PunchCardDesign.sunset => const Color(0xFFFFF4DF),
+    PunchCardDesign.inkSaver => Colors.white,
+  };
+
+  Color get cardBorderColor => switch (this) {
+    PunchCardDesign.classic => const Color(0xFF006F64),
+    PunchCardDesign.ocean => const Color(0xFF174978),
+    PunchCardDesign.sunset => const Color(0xFF9D432B),
+    PunchCardDesign.inkSaver => const Color(0xFF444444),
+  };
+
   IconData get icon => switch (this) {
     PunchCardDesign.classic => Icons.auto_awesome,
     PunchCardDesign.ocean => Icons.waves,

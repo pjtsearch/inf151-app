@@ -43,32 +43,29 @@ class GoalCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final inheritedTheme = Theme.of(context);
-    final colors = goal.design.colorScheme(inheritedTheme.brightness);
+    final colors = inheritedTheme.colorScheme;
     final theme = inheritedTheme.copyWith(
-      colorScheme: colors,
       textTheme: inheritedTheme.textTheme.apply(
-        bodyColor: colors.onSurface,
-        displayColor: colors.onSurface,
+        bodyColor: Colors.black,
+        displayColor: Colors.black,
       ),
     );
-    final tint = colors.primaryContainer;
+    final cardBackground = goal.design.cardBackgroundColor;
+    final cardBorder = goal.design.cardBorderColor;
     final endDate = goal.endDate.subtract(const Duration(days: 1));
     final totalTasks = goal.totalTasks;
     final completedTasks = goal.completedTasks.clamp(0, totalTasks);
     final progress = goal.progress;
 
-    return Theme(
-      data: theme,
-      child: Semantics(
+    return Semantics(
         selected: selectionMode ? isSelected : null,
         child: Card(
-          color: isSelected
-              ? colors.secondaryContainer
-              : colors.surfaceContainerLow,
+          color: cardBackground,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(24),
             side: BorderSide(
-              color: isSelected ? colors.primary : colors.outlineVariant,
+              color: cardBorder,
+              width: 3,
             ),
           ),
           clipBehavior: Clip.antiAlias,
@@ -141,6 +138,7 @@ class GoalCard extends StatelessWidget {
                               IconButton(
                                 tooltip: 'Make a copy',
                                 onPressed: onCopy,
+                                color: cardBorder,
                                 icon: const Icon(Icons.copy_outlined, size: 20),
                                 visualDensity: VisualDensity.compact,
                               ),
@@ -148,6 +146,7 @@ class GoalCard extends StatelessWidget {
                                 IconButton(
                                   tooltip: 'Print punch card',
                                   onPressed: onPrint,
+                                  color: cardBorder,
                                   icon: const Icon(
                                     Icons.print_outlined,
                                     size: 20,
@@ -157,6 +156,7 @@ class GoalCard extends StatelessWidget {
                               PopupMenuButton<String>(
                                 tooltip: 'Goal options',
                                 icon: const Icon(Icons.more_horiz),
+                                iconColor: cardBorder,
                                 onSelected: (action) {
                                   if (action == 'delete') onDelete();
                                 },
@@ -172,21 +172,6 @@ class GoalCard extends StatelessWidget {
                       ],
                     ],
                   ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      Icon(goal.design.icon, color: colors.primary, size: 18),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          goal.design.label,
-                          style: theme.textTheme.labelMedium?.copyWith(
-                            color: colors.primary,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
                   const SizedBox(height: 8),
                   Text(
                     goal.title,
@@ -199,14 +184,14 @@ class GoalCard extends StatelessWidget {
                   Text(
                     isCreatedByMe ? 'You' : goal.creatorName,
                     style: theme.textTheme.bodySmall?.copyWith(
-                      color: colors.onSurfaceVariant,
+                      color: Colors.black,
                     ),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     goal.frequencyDescription,
                     style: theme.textTheme.bodyMedium?.copyWith(
-                      color: colors.onSurfaceVariant,
+                      color: Colors.black,
                     ),
                   ),
                   if (goal.reward.label.isNotEmpty) ...[
@@ -217,13 +202,14 @@ class GoalCard extends StatelessWidget {
                         vertical: 10,
                       ),
                       decoration: BoxDecoration(
-                        color: tint,
+                        color: cardBorder,
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
                         'Reward · ${goal.reward.label}',
                         style: theme.textTheme.bodyMedium?.copyWith(
-                          color: colors.onPrimaryContainer,
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                     ),
@@ -233,8 +219,8 @@ class GoalCard extends StatelessWidget {
                     value: progress,
                     minHeight: 8,
                     borderRadius: BorderRadius.circular(8),
-                    color: colors.onPrimaryContainer,
-                    backgroundColor: colors.surfaceContainerHighest,
+                    color: Colors.black,
+                    backgroundColor: Colors.white,
                     trackGap: 0,
                     stopIndicatorRadius: 0,
                     semanticsLabel:
@@ -248,15 +234,11 @@ class GoalCard extends StatelessWidget {
                     children: [
                       Text(
                         '$completedTasks / $totalTasks completed',
-                        style: theme.textTheme.labelLarge?.copyWith(
-                          color: colors.onPrimaryContainer,
-                        ),
+                        style: theme.textTheme.labelLarge,
                       ),
                       Text(
                         '${isPast ? 'Ended on' : 'Ends on'} ${formatDate(endDate)}',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: colors.onSurfaceVariant,
-                        ),
+                        style: theme.textTheme.bodySmall,
                       ),
                     ],
                   ),
@@ -265,7 +247,6 @@ class GoalCard extends StatelessWidget {
             ),
           ),
         ),
-      ),
-    );
+      );
   }
 }
